@@ -18,7 +18,7 @@ K = np.array([[2e4, -1e4],
 
 # NonLinear part of the system - to be found
 def f_nl(q):
-    alpha = 1e6 
+    alpha = 1e6
     order = 3
     return np.array([alpha * q[0]**order, 0.0])
 
@@ -103,8 +103,8 @@ def aft_residual(x_flat, omega, F,H, N):
     for i in range(H):
         h = i + 1
         # https://hal.science/hal-01333697v1/document source avec cette formule mais pas sûr du tout, aussi pas de 2 au début
-        R.cos[:, i] = ( (2.0 / T) * np.trapezoid( Rt * np.cos(h * omega * t_vector), dx=dt, axis=1 ) )
-        R.sin[:, i] = ( (2.0 / T) * np.trapezoid( Rt * np.sin(h * omega * t_vector), dx=dt, axis=1 ) ) 
+        R.cos[:, i] = (2.0 / N) * np.sum(Rt * np.cos(h * omega * t_vector)[None, :], axis=1)
+        R.sin[:, i] = (2.0 / N) * np.sum(Rt * np.sin(h * omega * t_vector)[None, :], axis=1)
 
     return R.flatten()
 
@@ -117,8 +117,8 @@ def run_sequential_continuation(omega_span, F, H, N):
 
     for omega in omega_span:
 
-        sol = root(aft_residual,x_current,args=(omega, F, H, N),method="lm")
-        if not sol.success:
+        sol = root(aft_residual,x_current,args=(omega, F, H, N),options={"eps": 1e-8},method = "lm")
+        if not sol.success or np.max(np.abs(sol.fun)) > 1e-5:
             print(f"Convergence failed at omega = {omega:.2f} rad/s")
             break
 
@@ -132,27 +132,27 @@ def run_sequential_continuation(omega_span, F, H, N):
     return omega_sol,amp1,amp2
 
 H = 1
-N = 20
+N = 50
 
-omega_span = np.linspace(50,250, 500)
-F = 100.0
+omega_span = np.linspace(50,200, 100)
+F = 50.0
 
 omega_sol_up,amp1_up,amp2_up = run_sequential_continuation(omega_span, F, H, N)
 omega_sol_down,amp1_down,amp2_down = run_sequential_continuation(omega_span[::-1], F, H, N)
 
-plt.plot(omega_sol_up, amp1_up, label="DOF 1 — upward")
-plt.plot(omega_sol_down, amp1_down, "--", label="DOF 1 — downward")
+plt.plot(np.array(omega_sol_up)/2/np.pi, amp1_up, label="DOF 1 — upward")
+plt.plot(np.array(omega_sol_down)/2/np.pi, amp1_down, "--", label="DOF 1 — downward")
 
-plt.xlabel("Excitation frequency (rad/s)")
+plt.xlabel("Excitation frequency (Hz)")
 plt.ylabel("Fundamental amplitude")
 plt.legend()
 plt.savefig(f"figures/NLFR_dof1.pdf", bbox_inches="tight")
 plt.show()
 
-plt.plot(omega_sol_up, amp2_up, label="DOF 2 — upward")
-plt.plot(omega_sol_down, amp2_down, "--", label="DOF 2 — downward")
+plt.plot(np.array(omega_sol_up)/2/np.pi, amp2_up, label="DOF 2 — upward")
+plt.plot(np.array(omega_sol_down)/2/np.pi, amp2_down, "--", label="DOF 2 — downward")
 
-plt.xlabel("Excitation frequency (rad/s)")
+plt.xlabel("Excitation frequency (Hz)")
 plt.ylabel("Fundamental amplitude")
 plt.legend()
 plt.savefig(f"figures/NLFR_dof2.pdf", format='pdf', bbox_inches="tight")

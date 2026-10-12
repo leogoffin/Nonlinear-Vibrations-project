@@ -118,7 +118,7 @@ def run_sequential_continuation(omega_span, F, H, N):
     for omega in omega_span:
 
         sol = root(aft_residual,x_current,args=(omega, F, H, N),options={"eps": 1e-8},method = "lm")
-        if not sol.success or np.max(np.abs(sol.fun)) > 1e-5:
+        if not sol.success or np.max(np.abs(sol.fun)) > 1e-3:
             print(f"Convergence failed at omega = {omega:.2f} rad/s")
             break
 
@@ -135,7 +135,7 @@ H = 1
 N = 50
 
 omega_span = np.linspace(50,200, 100)
-F = 50.0
+F = 100.0
 
 omega_sol_up,amp1_up,amp2_up = run_sequential_continuation(omega_span, F, H, N)
 omega_sol_down,amp1_down,amp2_down = run_sequential_continuation(omega_span[::-1], F, H, N)

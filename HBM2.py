@@ -2,6 +2,7 @@ import numpy as np
 from scipy.optimize import root
 import matplotlib.pyplot as plt
 
+#==============
 # EoM matrices
 #--------------
 M = np.array([[1, 0],
@@ -15,15 +16,10 @@ K = np.array([[2e4, -1e4],
 
 #==============
 
-# Temporaire
-#--------------
-alpha = 1e6 
-order = 3
-#==============
-
-
 # NonLinear part of the system - to be found
 def f_nl(q):
+    alpha = 1e6 
+    order = 3
     return np.array([alpha * q[0]**order, 0.0])
 
 class FourierCoefs:
@@ -136,18 +132,28 @@ def run_sequential_continuation(omega_span, F, H, N):
     return omega_sol,amp1,amp2
 
 H = 1
-N = 25
+N = 20
 
-omega_span = np.linspace(50,250, 1000)
+omega_span = np.linspace(50,250, 500)
 F = 100.0
 
 omega_sol_up,amp1_up,amp2_up = run_sequential_continuation(omega_span, F, H, N)
-plt.plot(omega_sol_up, amp2_up, label="DOF 1 — upward")
 omega_sol_down,amp1_down,amp2_down = run_sequential_continuation(omega_span[::-1], F, H, N)
-plt.plot(omega_sol_down, amp2_down, "--", label="DOF 1 — downward")
 
-plt.xlabel(r"Excitation frequency $\Omega$ (rad/s)")
+plt.plot(omega_sol_up, amp1_up, label="DOF 1 — upward")
+plt.plot(omega_sol_down, amp1_down, "--", label="DOF 1 — downward")
+
+plt.xlabel("Excitation frequency (rad/s)")
 plt.ylabel("Fundamental amplitude")
-plt.title("Nonlinear frequency response")
 plt.legend()
+plt.savefig(f"figures/NLFR_dof1.pdf", bbox_inches="tight")
+plt.show()
+
+plt.plot(omega_sol_up, amp2_up, label="DOF 2 — upward")
+plt.plot(omega_sol_down, amp2_down, "--", label="DOF 2 — downward")
+
+plt.xlabel("Excitation frequency (rad/s)")
+plt.ylabel("Fundamental amplitude")
+plt.legend()
+plt.savefig(f"figures/NLFR_dof2.pdf", format='pdf', bbox_inches="tight")
 plt.show()

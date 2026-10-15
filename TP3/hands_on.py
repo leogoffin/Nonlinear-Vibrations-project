@@ -63,24 +63,30 @@ def filterAndDifferentiate(x, v, f, t, fnl, w1 =10, w2 =500):
     V = np.fft.fft(v)
     FNL = np.fft .fft(fnl(v, x))
     F = np.fft.fft(f)
+
     # Sampling time
     dt = t[1] - t[0]
+
     # Frequency vector
     w = 2* np.pi*np.fft.fftfreq(np.size(X))/dt
+
     # Filter : keep frequency content in [w1, w2]
     indFiltered = np.logical_or(np.abs(w) <= w1, np.abs(w) >= w2)
     X[indFiltered] = 0
     V[indFiltered] = 0
     FNL[indFiltered] = 0
     F[indFiltered] = 0
+
     # Compute frequency content of filtered velocity and acceleration
     A = np.complex128(0, 1)*w*V
+
     # Return to the time domain
     xf = np.real(np.fft.ifft(X))
     fnlf = np.real(np.fft.ifft(FNL))
     vf = np.real(np.fft.ifft(V))
     af = np.real(np.fft.ifft(A))
     fextf = np.real(np.fft.ifft(F))
+    
     return xf, vf, af, fnlf, fextf
 
 

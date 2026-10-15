@@ -129,31 +129,72 @@ def run_sequential_continuation(omega_span, F, H, N):
         amp1.append(np.sqrt(X.cos[0, 0]**2 + X.sin[0, 0]**2))
         amp2.append(np.sqrt(X.cos[1, 0]**2 + X.sin[1, 0]**2))
 
-    return omega_sol,amp1,amp2
+    return np.array(omega_sol),amp1,amp2
+
+def full_sweep_routine(omega_span, F, H, N):
+
+    omega_sol, amp1, amp2 = run_sequential_continuation(omega_span, F, H, N)
+    fail_id1 = len(omega_sol)
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5))
+
+    ax1.plot(np.array(omega_sol)/(2*np.pi), amp1, label="Initial sweep")
+    ax2.plot(np.array(omega_sol)/(2*np.pi), amp2, label="Initial sweep")
+
+    # First backward sweep
+    omega_left1 = omega_sol[::-1]
+    omega_solL1, amp1L1, amp2L1 = run_sequential_continuation(omega_left1, F, H, N)
+
+    ax1.plot(np.array(omega_solL1)/(2*np.pi), amp1L1, label="Backward 1")
+    ax2.plot(np.array(omega_solL1)/(2*np.pi), amp2L1, label="Backward 1")
+
+    # First restart
+    if 0 < fail_id1 < len(omega_span):
+
+        omega_right1 = omega_span[fail_id1 - 1:]
+
+        omega_solR1, amp1R1, amp2R1 = run_sequential_continuation(omega_right1, F, H, N)
+
+        ax1.plot(np.array(omega_solR1)/(2*np.pi), amp1R1, label="Restart 1")
+        ax2.plot(np.array(omega_solR1)/(2*np.pi), amp2R1, label="Restart 1")
+
+        # Second break
+        fail_id2 = len(omega_solR1)
+
+        if 0 < fail_id2 < len(omega_right1):
+
+            # Second backward sweep
+            omega_left2 = omega_solR1[::-1]
+
+            omega_solL2, amp1L2, amp2L2 = run_sequential_continuation(omega_left2, F, H, N)
+
+            ax1.plot(np.array(omega_solL2)/(2*np.pi), amp1L2,label="Backward 2")
+            ax2.plot(np.array(omega_solL2)/(2*np.pi), amp2L2,label="Backward 2")
+
+            # Second restart
+            omega_right2 = omega_right1[fail_id2 - 1:]
+            omega_solR2, amp1R2, amp2R2 = run_sequential_continuation(omega_right2, F, H, N)
+
+            ax1.plot(np.array(omega_solR2)/(2*np.pi), amp1R2,label="Restart 2")
+            ax2.plot(np.array(omega_solR2)/(2*np.pi), amp2R2,label="Restart 2")
+
+    for ax, title in zip((ax1, ax2), ("DOF 1", "DOF 2")):
+        ax.set_xlabel("Excitation frequency (Hz)")
+        ax.set_ylabel("Fundamental amplitude")
+        ax.set_title(title)
+        ax.set_xlim(omega_span[0]/(2*np.pi),omega_span[-1]/(2*np.pi))
+        ax.legend()
+
+    plt.tight_layout()
+    plt.savefig(f"figures/NLFR_F{F}_H{H}_N{N}.pdf", bbox_inches="tight")
+    plt.show()
+
+
+    
 
 H = 1
 N = 50
 
-omega_span = np.linspace(50,200, 100)
+omega_span = np.linspace(50,250, 200)
 F = 100.0
-
-omega_sol_up,amp1_up,amp2_up = run_sequential_continuation(omega_span, F, H, N)
-omega_sol_down,amp1_down,amp2_down = run_sequential_continuation(omega_span[::-1], F, H, N)
-
-plt.plot(np.array(omega_sol_up)/2/np.pi, amp1_up, label="DOF 1 — upward")
-plt.plot(np.array(omega_sol_down)/2/np.pi, amp1_down, "--", label="DOF 1 — downward")
-
-plt.xlabel("Excitation frequency (Hz)")
-plt.ylabel("Fundamental amplitude")
-plt.legend()
-plt.savefig(f"figures/NLFR_dof1.pdf", bbox_inches="tight")
-plt.show()
-
-plt.plot(np.array(omega_sol_up)/2/np.pi, amp2_up, label="DOF 2 — upward")
-plt.plot(np.array(omega_sol_down)/2/np.pi, amp2_down, "--", label="DOF 2 — downward")
-
-plt.xlabel("Excitation frequency (Hz)")
-plt.ylabel("Fundamental amplitude")
-plt.legend()
-plt.savefig(f"figures/NLFR_dof2.pdf", format='pdf', bbox_inches="tight")
-plt.show()
+full_sweep_routine(omega_span,F,H,N)

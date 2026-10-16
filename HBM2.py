@@ -126,8 +126,9 @@ def run_sequential_continuation(omega_span, F, H, N):
         X = unflatten(x_current, H)
 
         omega_sol.append(omega) # different from omega_span -> there is not the omegas without solutions
-        amp1.append(np.sqrt(X.cos[0, 0]**2 + X.sin[0, 0]**2))
-        amp2.append(np.sqrt(X.cos[1, 0]**2 + X.sin[1, 0]**2))
+
+        amp1.append(np.sqrt((X.cos[0, 0] + X.cos[1, 0])**2 + (X.sin[0, 0] + X.sin[1, 0])**2))
+        amp2.append(np.sqrt((X.cos[0, 0] - X.cos[1, 0])**2 + (X.sin[0, 0] - X.sin[1, 0])**2))
 
     return np.array(omega_sol),amp1,amp2
 
@@ -178,7 +179,7 @@ def full_sweep_routine(omega_span, F, H, N):
             ax1.plot(np.array(omega_solR2)/(2*np.pi), amp1R2,label="Restart 2")
             ax2.plot(np.array(omega_solR2)/(2*np.pi), amp2R2,label="Restart 2")
 
-    for ax, title in zip((ax1, ax2), ("DOF 1", "DOF 2")):
+    for ax, title in zip((ax1, ax2), ("Mode 1", "Mode 2")):
         ax.set_xlabel("Excitation frequency (Hz)")
         ax.set_ylabel("Fundamental amplitude")
         ax.set_title(title)
@@ -190,11 +191,10 @@ def full_sweep_routine(omega_span, F, H, N):
     plt.show()
 
 
-    
 
-H = 1
+H = 3
 N = 50
 
-omega_span = np.linspace(50,250, 200)
-F = 100.0
+omega_span = np.linspace(50,350, 400)
+F = 400.0
 full_sweep_routine(omega_span,F,H,N)

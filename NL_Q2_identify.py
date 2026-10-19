@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D  
-
+import pandas as pd
 
 M = np.array([[1, 0],
               [0, 1]])
@@ -12,15 +12,14 @@ C = np.array([[3, -1],
 K = np.array([[2e4, -1e4],
               [-1e4, 2e4]])
 
+#on espère recevoir ça des test: (Ns c'est la lg de l'élément)
+# q: (Ns, 2), déplacements
+# q_dot: (Ns, 2), vitesses
+# q_ddot: (Ns, 2), accélérations
+# F_ext : (Ns, 2), forces
+# t : temps
 
 def calculate_residual_forces(q, q_dot, q_ddot, F_ext, M, C, K):
-
-    #on espère recevoir ça des test: (Ns c'est la lg de l'élément)
-    # q: (Ns, 2), déplacements
-    # q_dot: (Ns, 2), vitesses
-    # q_ddot: (Ns, 2), accélérations
-    # F_ext : (Ns, 2), forces
-    # t : temps
 
     F_nl = (F_ext- q_ddot @ M.T- q_dot @ C.T- q @ K.T) #force non linéaire résiduelle
     
@@ -55,6 +54,7 @@ def plot_residual_forces(t, F_nl):
     ax[1].grid(True)
 
     plt.tight_layout()
+    plt.savefig("figures/Residual_forces.pdf",format = "pdf")
     plt.show()
 
     return 
@@ -71,9 +71,9 @@ def plot_asm_surface(q, q_dot, F_nl, dof=0):
     ax.set_title(f"ASM - DOF {dof + 1}")
 
     plt.tight_layout()
+    plt.savefig("figures/asm_surface.pdf",format = "pdf")
     plt.show()
     return 
-
 
 def plot_residual_vs_displacement(q, F_nl, dof=0):
 
@@ -89,11 +89,10 @@ def plot_residual_vs_displacement(q, F_nl, dof=0):
     plt.grid(True)
 
     plt.tight_layout()
+    plt.savefig("figures/res_force_vs_displ.pdf",format = "pdf")
     plt.show()
 
     return
-
-
 
 def calculate_restoring_force(q_ddot, F_ext, M):
 
@@ -101,13 +100,13 @@ def calculate_restoring_force(q_ddot, F_ext, M):
 
     return F_RFS
 
-
 def estimate_rfs_polynomial(q, q_dot, F_RFS, dof=0,m_order=3, n_order=3):
 
     x = q[:, dof]
     x_dot = q_dot[:, dof]
     f = F_RFS[:, dof]
-
+    
+    columns = []
     term_names = []
 
     for i in range(m_order + 1):
@@ -166,11 +165,41 @@ def plot_rfs_surface(q, q_dot, F_RFS, alpha, term_names,dof=0):
     ax.set_title(f"RFS identifiée - DOF {dof + 1}")
 
     plt.tight_layout()
+    plt.savefig("figures/rfs_surface.pdf",format = "pdf")
     plt.show()
 
 ##################### MAIN ########################""
 #q, q_dot, q_ddot, F_ext et t doivent être récupérés des tests
 #--- Q2.b ----#
+
+def load_csv(filename,key):
+    df = pd.read_csv("NI2D_test/"+ filename +".csv")
+    return df[key].to_numpy()
+
+t = load_csv("dof1_q","Time (s)")
+F1 = load_csv("dof1_force","Force (N)")
+F2 = np.zeros_like(F1)
+
+q1 = load_csv("dof1_q","pos(m)")
+q2 = load_csv("dof2_q","pos(m)")
+
+qdot1 = load_csv("dof1_qdot","vel(m/s)")
+qdot2 = load_csv("dof2_qdot","vel(m/s)")
+
+qddot1 = load_csv("dof1_qdotdot","acc(m/s2)")
+qddot2 = load_csv("dof2_qdotdot","acc(m/s2)")
+
+q = np.column_stack((q1, q2))
+q_dot = np.column_stack((qdot1, qdot2))
+q_ddot = np.column_stack((qddot1, qddot2))
+F_ext = np.column_stack((F1, F2))
+
+q = q[::10]
+q_dot = q_dot[::10]
+q_ddot = q_ddot[::10]
+F_ext = F_ext[::10]
+t = t[::10]
+
 F_nl = calculate_residual_forces(q, q_dot, q_ddot, F_ext, M, C, K)
 
 residu_1, residu_2 = calculate_residual_rms(F_nl)
@@ -195,7 +224,7 @@ n_order = 3
 
 
 results_1 = estimate_rfs_polynomial(q, q_dot, F_RFS,dof=0,m_order=m_order,n_order=n_order)
-alpha_1, f_pred_1, terms_1, rmse_1, mse_1, rank_1 = results_1
+alpha_1, f_pred_1, terms_1, rmse_1, mse_1 = results_1
 
 print("\nDOF 1")
 print_rfs_results(alpha_1, terms_1, rmse_1, mse_1)

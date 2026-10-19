@@ -194,11 +194,11 @@ q_dot = np.column_stack((qdot1, qdot2))
 q_ddot = np.column_stack((qddot1, qddot2))
 F_ext = np.column_stack((F1, F2))
 
-q = q[::10]
-q_dot = q_dot[::10]
-q_ddot = q_ddot[::10]
-F_ext = F_ext[::10]
-t = t[::10]
+q = q[::50]
+q_dot = q_dot[::50]
+q_ddot = q_ddot[::50]
+F_ext = F_ext[::50]
+t = t[::50]
 
 F_nl = calculate_residual_forces(q, q_dot, q_ddot, F_ext, M, C, K)
 
@@ -229,13 +229,13 @@ alpha_1, f_pred_1, terms_1, rmse_1, mse_1 = results_1
 print("\nDOF 1")
 print_rfs_results(alpha_1, terms_1, rmse_1, mse_1)
 
-plot_rfs_surface(q, q_dot, F_RFS,alpha_1, terms_1,dof=0,m_order=m_order,n_order=n_order)
+plot_rfs_surface(q, q_dot, F_RFS,alpha_1, terms_1,dof=0)
 
 results_2 = estimate_rfs_polynomial(q, q_dot, F_RFS,dof=1,m_order=m_order,n_order=n_order)
-alpha_2, f_pred_2, terms_2, rmse_2, mse_2, rank_2 = results_2
+alpha_2, f_pred_2, terms_2, rmse_2, mse_2 = results_2
 
 print("\nDOF 2")
-print_rfs_results(alpha_2, terms_2, rmse_2, mse_2, rank_2)
+print_rfs_results(alpha_2, terms_2, rmse_2, mse_2)
 
-plot_rfs_surface(q, q_dot, F_RFS,alpha_2, terms_2,dof=1,m_order=m_order,n_order=n_order)
+plot_rfs_surface(q, q_dot, F_RFS,alpha_2, terms_2,dof=1)
 

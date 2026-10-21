@@ -41,7 +41,6 @@ class FourierCoefs:
         return np.concatenate(X_flat) # 2 * (1+2*H)
 
 def unflatten(x_flat, H):
-    #full chat j'ai confiance
     X = FourierCoefs(H)
     X.mean = x_flat[0:2]
 
@@ -53,6 +52,7 @@ def unflatten(x_flat, H):
     return X
 
 def kinematics(X,t,omega):
+    #For excitation of the form F = A cos (w t)
 
     q = X.mean.copy() # copy of [Q01, Q02]
     qdot = np.zeros(2) # [0,0]
@@ -72,10 +72,6 @@ def kinematics(X,t,omega):
 
 
 def hbm_residuals(X,t, omega, F_ext):
-    """
-        Demo tablette de Manu 
-        - j'utilise direct qdot et qdotdot -> mathematiquement la même
-    """
 
     q,qdot,qdotdot = kinematics(X,t,omega)  # linear kinematics
     F_nl = f_nl(q)
@@ -83,28 +79,31 @@ def hbm_residuals(X,t, omega, F_ext):
 
     return R_t
 
-def aft_residual(x_flat, omega, F,H, N):
+def aft_residual(x_flat, omega, F, H, N):
 
     X = unflatten(x_flat, H)
-    H = X.H
+
     T = 2 * np.pi / omega
-    t_vector = np.linspace(0, T, N, endpoint=False)
-    dt = t_vector[1] - t_vector[0]
+    t_vector = np.linspace(0, T - T/N, N) #we avoid taking twice the same point
 
+    Rt = np.zeros((2, N))  #residuals (2 x #timesteps)
 
-    Rt = np.zeros((2, N)) #residuals (2 x #timesteps)
     for j, t in enumerate(t_vector):
         F_ext = np.array([F * np.cos(omega * t), 0.0])
-        Rt[:, j] = hbm_residuals(X,t,omega,F_ext) # residual at time t (2 x 1)
+        Rt[:, j] = hbm_residuals(X, t, omega, F_ext)  # residual at time t (2 x 1)
 
     # Alternating Frequency-Time method
     R = FourierCoefs(H)
     R.mean = np.mean(Rt, axis=1)
+
     for i in range(H):
         h = i + 1
-        # https://hal.science/hal-01333697v1/document source avec cette formule mais pas sûr du tout, aussi pas de 2 au début
-        R.cos[:, i] = (2.0 / N) * np.sum(Rt * np.cos(h * omega * t_vector)[None, :], axis=1)
-        R.sin[:, i] = (2.0 / N) * np.sum(Rt * np.sin(h * omega * t_vector)[None, :], axis=1)
+        cos_h = np.cos(h * omega * t_vector)
+        sin_h = np.sin(h * omega * t_vector)
+
+        # https://hal.science/hal-01333697v1/document
+        R.cos[:, i] = (2.0 / N) * (Rt @ cos_h)
+        R.sin[:, i] = (2.0 / N) * (Rt @ sin_h)
 
     return R.flatten()
 

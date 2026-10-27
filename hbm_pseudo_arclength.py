@@ -150,26 +150,12 @@ def hbm_pseudo_arclength(
     C = np.asarray(C, dtype=float)
     K = np.asarray(K, dtype=float)
 
-    if M.ndim != 2 or M.shape[0] != M.shape[1]:
-        raise ValueError("M must be a square matrix.")
     n_dof = M.shape[0]
-    if C.shape != M.shape or K.shape != M.shape:
-        raise ValueError("M, C, and K must have the same square shape.")
-    if omega0 <= 0:
-        raise ValueError("omega0 must be positive (rad/s).")
-    if n_harmonics < 1:
-        raise ValueError("n_harmonics must be at least 1.")
-    if ds <= 0 or ds_min <= 0 or ds_max < ds_min:
-        raise ValueError("Require ds > 0 and 0 < ds_min <= ds_max.")
-
     n_coeff = 2 * n_harmonics + 1
     n_z = n_coeff * n_dof
 
     if n_samples is None:
-        n_required = max(64, 8 * n_coeff)
-        n_samples = 2 ** int(np.ceil(np.log2(n_required)))
-    if n_samples <= 2 * n_harmonics:
-        raise ValueError("n_samples must be greater than 2*n_harmonics.")
+        n_samples = max(32, 4 * n_coeff)
 
     theta = 2.0 * np.pi * np.arange(n_samples) / n_samples
     Phi = _fourier_basis(theta, n_harmonics)
@@ -380,29 +366,3 @@ def plot_nlfr(result, dof=0):
     plt.ylabel(f"First-harmonic amplitude, DOF {dof} (displacement units)")
     plt.xlim(min(result["frequency_hz"]),max(result["frequency_hz"]))
     plt.grid(True)
-
-
-if __name__ == "__main__":
-    # Demonstration: forced Duffing oscillator. Replace these functions and
-    # matrices with the model of interest.
-    M = np.array([[1.0]])
-    C = np.array([[0.05]])
-    K = np.array([[1.0]])
-    force_amplitude = 0.5
-    cubic_stiffness = 1.0
-
-    def f_ext(omega, t):
-        return force_amplitude * np.cos(omega * t)
-
-    def f_nl(q, q_dot):
-        return cubic_stiffness * q**3
-
-    result = hbm_pseudo_arclength(
-        M, C, K, f_ext, omega0=0.6, f_nl=f_nl,
-        n_harmonics=5, dw_initial=0.002, n_steps=250,
-        ds=0.015, ds_min=1e-4, ds_max=0.03,
-    )
-
-    plot_nlfr(result)
-    plt.tight_layout()
-    plt.show()

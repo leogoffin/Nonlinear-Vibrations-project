@@ -13,8 +13,8 @@ K = np.array([[2e4, -1e4],
               [-1e4, 2e4]])
 
 
-F0 = 500.0
-k3 = 1e6
+F0 = 200.0
+k3 = 1e10
 
 def f_ext(omega, t):
     F = np.zeros((len(t), 2))
@@ -23,7 +23,7 @@ def f_ext(omega, t):
 
 def f_nl(q, q_dot):
     F = np.zeros_like(q)
-    F[:, 0] = k3 * q[:, 0]**3
+    F[:, 0] = k3 * q[:, 0]**7
     return F
 
 result = hbm_pseudo_arclength(
@@ -33,7 +33,7 @@ result = hbm_pseudo_arclength(
     omega0=30.0,
     n_harmonics=5,
     dw_initial=0.5,
-    n_steps=2000,
+    n_steps=4000,
     ds=0.02,
     ds_min=1e-4,
     ds_max=0.06)

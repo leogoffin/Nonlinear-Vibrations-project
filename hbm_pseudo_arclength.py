@@ -14,20 +14,6 @@ from scipy.optimize import least_squares
 import matplotlib.pyplot as plt
 
 
-def _fourier_basis(theta, n_harmonics):
-    """Return Phi for q = Phi @ coefficients, using c0/2 as the first term."""
-    n_samples = len(theta)
-    n_coeff = 2 * n_harmonics + 1
-    Phi = np.zeros((n_samples, n_coeff))
-    Phi[:, 0] = 0.5
-
-    for k in range(1, n_harmonics + 1):
-        Phi[:, 2 * k - 1] = np.sin(k * theta)
-        Phi[:, 2 * k] = np.cos(k * theta)
-
-    return Phi
-
-
 def _derivative_matrix(omega, n_harmonics):
     """Coefficient-space matrix D such that q_dot = Phi @ D @ Z."""
     n_coeff = 2 * n_harmonics + 1
@@ -57,34 +43,15 @@ def _as_time_matrix(values, n_samples, n_dof, name):
     if values.shape == (n_samples, n_dof):
         return values
 
-    raise ValueError(
-        f"{name} must be a scalar, a constant vector of length {n_dof}, "
-        f"or an array with shape ({n_samples}, {n_dof}); got {values.shape}."
-    )
 
-
-def hbm_pseudo_arclength(
-    M,
-    C,
-    K,
-    f_ext,
-    omega0,
-    f_nl=None,
-    z0=None,
-    n_harmonics=3,
-    n_samples=None,
+def hbm_pseudo_arclength(M,C,K,
+    f_ext,omega0,f_nl=None,z0=None,
+    n_harmonics=3,n_samples=None,
     dw_initial=None,
-    n_steps=200,
-    ds=0.02,
-    ds_min=1e-4,
-    ds_max=0.06,
-    z_scale=None,
-    omega_scale=None,
-    force_scale=None,
-    tol=1e-9,
-    max_retries=8,
-    adaptive_step=True,
-):
+    n_steps=200,ds=0.02,ds_min=1e-4,ds_max=0.06,
+    z_scale=None,omega_scale=None,force_scale=None,
+    tol=1e-9,max_retries=8,
+    adaptive_step=True,):
     """Trace a nonlinear frequency-response branch with HBM + pseudo-arclength.
 
     Parameters
@@ -158,7 +125,16 @@ def hbm_pseudo_arclength(
         n_samples = max(32, 4 * n_coeff)
 
     theta = 2.0 * np.pi * np.arange(n_samples) / n_samples
-    Phi = _fourier_basis(theta, n_harmonics)
+
+    n_samples = len(theta)
+    n_coeff = 2 * n_harmonics + 1
+    Phi = np.zeros((n_samples, n_coeff))
+    Phi[:, 0] = 0.5
+
+    for k in range(1, n_harmonics + 1):
+        Phi[:, 2 * k - 1] = np.sin(k * theta)
+        Phi[:, 2 * k] = np.cos(k * theta)
+
     Phi_pinv = np.linalg.pinv(Phi)
     identity_coeff = np.eye(n_coeff)
 
@@ -167,9 +143,7 @@ def hbm_pseudo_arclength(
             return np.zeros_like(q)
 
     def external_samples(omega):
-        # Avoid division by zero during a Newton trial near omega = 0.
-        omega_for_time = omega if abs(omega) > 1e-10 else np.copysign(1e-10, omega if omega != 0 else 1.0)
-        t_samples = theta / omega_for_time
+        t_samples = theta / omega
         return _as_time_matrix(f_ext(omega, t_samples), n_samples, n_dof, "f_ext")
 
     def nonlinear_samples(q, q_dot):
@@ -184,8 +158,7 @@ def hbm_pseudo_arclength(
         q_dot = Phi @ D @ Z
         q_ddot = Phi @ D2 @ Z
 
-        R = (q_ddot @ M.T + q_dot @ C.T + q @ K.T
-             + nonlinear_samples(q, q_dot) - external_samples(omega))
+        R = (q_ddot @ M.T + q_dot @ C.T + q @ K.T + nonlinear_samples(q, q_dot) - external_samples(omega))
         return (Phi_pinv @ R).ravel()
 
     def linear_initial_guess(omega):
@@ -202,10 +175,6 @@ def hbm_pseudo_arclength(
             return values.ravel()
         if values.size == n_z:
             return values.reshape(n_z)
-        raise ValueError(
-            f"z0 must contain {n_z} coefficients, arranged as "
-            f"({n_coeff}, {n_dof}) or a flat vector."
-        )
 
     z_linear0 = linear_initial_guess(omega0)
     z_guess0 = z_linear0 if z0 is None else unpack_z(z0)
@@ -213,54 +182,32 @@ def hbm_pseudo_arclength(
     if z_scale is None:
         z_characteristic = max(float(np.max(np.abs(z_guess0))), 1e-8)
         z_scale_vector = np.full(n_z, z_characteristic)
+
     else:
         z_scale_array = np.asarray(z_scale, dtype=float)
         if z_scale_array.ndim == 0:
             z_scale_vector = np.full(n_z, float(z_scale_array))
         elif z_scale_array.size == n_z:
             z_scale_vector = z_scale_array.reshape(n_z)
-        else:
-            raise ValueError(f"z_scale must be scalar or contain {n_z} values.")
-        if np.any(z_scale_vector <= 0):
-            raise ValueError("All z_scale values must be positive.")
 
     if omega_scale is None:
         omega_scale = max(abs(omega0), 1.0)
-    if omega_scale <= 0:
-        raise ValueError("omega_scale must be positive.")
 
     if force_scale is None:
         b0 = (Phi_pinv @ external_samples(omega0)).ravel()
         force_scale = max(float(np.max(np.abs(b0))), 1e-12)
-    if force_scale <= 0:
-        raise ValueError("force_scale must be positive.")
 
     def solve_fixed_frequency(omega, z_guess):
         def residual_scaled(y):
             return hbm_residual(y * z_scale_vector, omega) / force_scale
 
-        solution = least_squares(
-            residual_scaled, z_guess / z_scale_vector,
-            xtol=tol, ftol=tol, gtol=tol, x_scale="jac", max_nfev=5000,
-        )
+        solution = least_squares(residual_scaled, z_guess / z_scale_vector,xtol=tol, ftol=tol, gtol=tol, x_scale="jac", max_nfev=5000)
         residual_norm = np.linalg.norm(residual_scaled(solution.x), ord=np.inf)
-        if (not solution.success) and residual_norm > max(100.0 * tol, 1e-8):
-            raise RuntimeError(
-                f"HBM solve failed at omega={omega:.8g} rad/s: "
-                f"{solution.message}; scaled residual={residual_norm:.3e}."
-            )
-        if not np.isfinite(residual_norm) or residual_norm > max(100.0 * tol, 1e-8):
-            raise RuntimeError(
-                f"HBM residual too large at omega={omega:.8g} rad/s: "
-                f"{residual_norm:.3e}."
-            )
         return solution.x * z_scale_vector
 
     if dw_initial is None:
         dw_initial = max(0.005 * omega0, 1e-4)
     omega1 = omega0 + dw_initial
-    if omega1 <= 0:
-        raise ValueError("omega0 + dw_initial must remain positive.")
 
     z_first = solve_fixed_frequency(omega0, z_guess0)
     z_second_guess = z_first
@@ -279,8 +226,6 @@ def hbm_pseudo_arclength(
     for _ in range(n_steps):
         tangent = y_current - y_previous
         tangent_norm = np.linalg.norm(tangent)
-        if tangent_norm == 0:
-            raise RuntimeError("Continuation tangent vanished; the two seed points coincide.")
         tangent = tangent / tangent_norm
 
         accepted = False
@@ -296,15 +241,12 @@ def hbm_pseudo_arclength(
                 arc_constraint = np.dot(tangent, y - y_predictor)
                 return np.concatenate((h, [arc_constraint]))
 
-            solution = least_squares(
-                augmented_residual, y_predictor,
-                xtol=tol, ftol=tol, gtol=tol, x_scale="jac", max_nfev=5000,
-            )
+            solution = least_squares(augmented_residual, y_predictor,xtol=tol, ftol=tol, gtol=tol, x_scale="jac", max_nfev=5000)
             residual_norm = np.linalg.norm(augmented_residual(solution.x), ord=np.inf)
             omega_new = solution.x[-1] * scale[-1]
-            converged = (solution.success or residual_norm <= max(100.0 * tol, 1e-8))
+            converged = (solution.success or residual_norm <= tol)
             converged = converged and np.isfinite(residual_norm)
-            converged = converged and residual_norm <= max(100.0 * tol, 1e-8)
+            converged = converged and residual_norm <= tol
             converged = converged and omega_new > 0.0
 
             if converged:
@@ -314,13 +256,6 @@ def hbm_pseudo_arclength(
             trial_step *= 0.5
             if trial_step < ds_min:
                 break
-
-        if not accepted:
-            raise RuntimeError(
-                "Pseudo-arclength corrector failed after step-size reductions. "
-                f"Last attempted scaled step={trial_step:.3e}. Try a smaller ds, "
-                "larger n_samples, or a better initial point."
-            )
 
         y_new = solution.x
         y_points.append(y_new.copy())
@@ -345,24 +280,24 @@ def hbm_pseudo_arclength(
     z_points = x_points[:, :-1]
     omega_points = x_points[:, -1]
     coefficient_points = z_points.reshape(-1, n_coeff, n_dof)
-    first_harmonic_amplitude = np.hypot(
-        coefficient_points[:, 1, :], coefficient_points[:, 2, :]
-    )
+    amplitude = np.zeros((len(coefficient_points), n_dof))
+
+    for i in range(len(coefficient_points)):
+        q = Phi @ coefficient_points[i]
+        amplitude[i] = (np.max(q, axis=0) - np.min(q, axis=0)) / 2
 
     return {
         "omega": omega_points,
         "frequency_hz": omega_points / (2.0 * np.pi),
         "coefficients": coefficient_points,
-        "amplitude": first_harmonic_amplitude,
+        "amplitude": amplitude,
         "scaled_step": np.asarray(used_steps),
-        "corrector_nfev": np.asarray(corrector_nfev),
-    }
+        "corrector_nfev": np.asarray(corrector_nfev)}
 
 
 def plot_nlfr(result, dof=0):
-    """Plot first-harmonic displacement amplitude versus excitation frequency."""
+
     plt.plot(result["frequency_hz"], result["amplitude"][:, dof])
     plt.xlabel("Excitation frequency (Hz)")
     plt.ylabel(f"First-harmonic amplitude, DOF {dof} (displacement units)")
     plt.xlim(min(result["frequency_hz"]),max(result["frequency_hz"]))
-    plt.grid(True)

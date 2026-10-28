@@ -61,7 +61,7 @@ def filterAndDifferentiate(x, v, f, t, fnl, w1 =10, w2 =500):
     # Input signals in the frequency domain
     X = np.fft.fft(x)
     V = np.fft.fft(v)
-    FNL = np.fft .fft(fnl(v, x))
+    FNL = np.fft.fft(fnl(v, x))
     F = np.fft.fft(f)
 
     # Sampling time
@@ -147,7 +147,7 @@ for i in range(3):
     ax[i].plot(data_f["omega"], data_f["x"], label="Forward")
     ax[i].plot(data_b["omega"], data_b["x"], label="Backward")
     ax[i].set_ylabel("Displacement x")
-    ax[i].set_title(title)
+    ax[i].set_title(title[i])
     ax[i].legend()
 
 ax[2].set_xlabel("Frequency [Hz]")
@@ -170,9 +170,9 @@ t = np.asarray(data["t"]).squeeze()
 dt = t[1] - t[0]
 fs = 1 / dt
 
-nperseg = min(1024,len(x))
+nperseg = 1024
 noverlap = 3 * nperseg // 4
-fr_spec, t_spec, Sxx = spectrogram(x,fs=fs,window="hann",nperseg=nperseg,noverlap=noverlap,mode="magnitude")
+fr_spec, t_spec, Sxx = spectrogram(x,fs=fs,window="hann",nperseg=nperseg,mode="magnitude")
 Sdb = 20 * np.log10(np.maximum(Sxx / np.max(Sxx),1e-12))
 
 plt.figure(figsize=(10, 6))
@@ -187,30 +187,108 @@ plt.savefig("spectrogram.png")
 plt.show()
 
 #-----
-# 3D plot
+# Sinesweep data
 #-----
+
 data = load_npz("4_100Nf.npz")
 
-t = np.asarray(data["t"])
-x = np.asarray(data["x"])
-v = np.asarray(data["v"])
-f = np.asarray(data["f"])
+t = np.asarray(data["t"]).squeeze()
+x = np.asarray(data["x"]).squeeze()
+v = np.asarray(data["v"]).squeeze()
+f = np.asarray(data["f"]).squeeze()
+
 fnl_zero = lambda v, x: np.zeros_like(x)
 
-xf, vf, af, _, ff = filterAndDifferentiate(x, v, f, t, fnl_zero, w1=10, w2=500)
+xf, vf, af, fnlf_zero, ff = filterAndDifferentiate(x, v, f, t, fnl_zero, w1=50, w2=300)
 
-# Subsample to keep the plot manageable
 step = max(1, len(xf) // 5000)
 
-fig = plt.figure(figsize=(9, 7))
+#-----
+# Power law fitting
+#-----
+
+max_order = 8
+threshold = 0.5  # Minimum NRMSE delta in %
+
+std_af = np.std(af)
+
+X = vf.reshape(-1, 1)
+coeff, _, _, _ = np.linalg.lstsq(X, af, rcond=None)
+af_pred = X @ coeff
+rmse = np.sqrt(np.mean((af - af_pred)**2))
+
+accepted_powers = []
+accepted_coeff = None
+current_nrmse =  rmse / std_af * 100
+tested_powers = []
+tested_deltas = []
+
+for power in range(1, max_order + 1):
+
+    powers = accepted_powers + [power]
+    X = np.column_stack([xf**p for p in powers] + [vf])
+
+    coeff, _, _, _ = np.linalg.lstsq(X, af, rcond=None)
+    af_pred = X @ coeff
+
+    rmse = np.sqrt(np.mean((af - af_pred)**2))
+    nrmse = rmse / std_af * 100
+    delta = current_nrmse - nrmse
+
+    tested_powers.append(power)
+    tested_deltas.append(delta)
+
+    print(f"x^{power}: NRMSE = {nrmse:.2f}%, "f"delta = {delta:.2f}%")
+
+    if delta >= threshold:
+        accepted_powers.append(power)
+        accepted_coeff = coeff
+        current_nrmse = nrmse
+
+print("\nAccepted powers:", accepted_powers)
+print(f"Final NRMSE: {current_nrmse:.4f}%")
+
+X = np.column_stack([xf**p for p in accepted_powers] + [vf])
+accepted_coeff, _, _, _ = np.linalg.lstsq(X, af, rcond=None)
+af_pred = X @ accepted_coeff
+
+# Acceleration surface 
+fig = plt.figure(figsize=(9, 6))
 ax = fig.add_subplot(111, projection="3d")
 
-ax.scatter(xf[::step],vf[::step],af[::step],c=af[::step],cmap="magma",s=3)
-ax.set_xlabel("Displacement x")
-ax.set_ylabel("Velocity dx/dt")
-ax.set_zlabel("Acceleration d²x/dt²")
-ax.set_title("Acceleration surface — upward sweep, 100 N")
+step = max(1, len(xf) // 5000)
 
+ax.scatter(xf[::step], vf[::step], af[::step],s=2, alpha=0.2, label="Filtered data")
+
+x_curve = np.linspace(np.min(xf), np.max(xf), 500)
+a_curve = np.zeros_like(x_curve)
+
+for i, power in enumerate(accepted_powers):
+    a_curve += accepted_coeff[i] * x_curve**power
+
+ax.plot(x_curve, np.zeros_like(x_curve), a_curve,color="red", linewidth=2, label="Fitted curves")
+ax.set_xlabel("Displacement x")
+ax.set_ylabel("Velocity v")
+ax.set_zlabel("Acceleration a")
+ax.legend()
 plt.tight_layout()
-plt.savefig("acceleration_surface.pdf")
+plt.show()
+
+# NRMSE delta 
+plt.figure(figsize=(8, 4))
+plt.bar(tested_powers, tested_deltas)
+plt.xticks(tested_powers)
+plt.xlabel("Candidate power")
+plt.ylabel(r"$\Delta$ NRMSE (%)")
+plt.tight_layout()
+plt.show()
+
+# log abs(coefficients)
+coeff_x = accepted_coeff[:-1]
+
+plt.figure(figsize=(8, 4))
+plt.bar([f"x^{p}" for p in accepted_powers],np.log10(np.maximum(np.abs(coeff_x), 1e-12)))
+plt.xlabel("Accepted polynomial term")
+plt.ylabel(r"$\log_{10}(|c_p|)$")
+plt.tight_layout()
 plt.show()

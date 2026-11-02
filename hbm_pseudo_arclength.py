@@ -45,7 +45,7 @@ def _as_time_matrix(values, n_samples, n_dof, name):
 
 
 def hbm_pseudo_arclength(M,C,K,
-    f_ext,omega0,f_nl=None,z0=None,
+    f_ext,omega0,omegamax,f_nl=None,z0=None,
     n_harmonics=3,n_samples=None,
     dw_initial=None,
     n_steps=200,ds=0.02,ds_min=1e-4,ds_max=0.06,
@@ -274,6 +274,8 @@ def hbm_pseudo_arclength(M,C,K,
                 step = trial_step
         else:
             step = float(np.clip(ds, ds_min, ds_max))
+        if omega_new > omegamax : 
+            break
 
     y_points = np.asarray(y_points)
     x_points = y_points * scale

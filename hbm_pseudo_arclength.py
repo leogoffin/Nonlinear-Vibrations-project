@@ -46,7 +46,7 @@ def _as_time_matrix(values, n_samples, n_dof, name):
 
 def hbm_pseudo_arclength(M,C,K,
     f_ext,omega0,omegamax,f_nl=None,z0=None,
-    n_harmonics=3,n_samples=None,
+    n_harmonics=5,n_samples=None,
     dw_initial=None,
     n_steps=200,ds=0.02,ds_min=1e-4,ds_max=0.06,
     z_scale=None,omega_scale=None,force_scale=None,

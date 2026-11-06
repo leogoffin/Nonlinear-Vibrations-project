@@ -71,7 +71,6 @@ def inspect_mat(filename):
             print(name, obj.shape if isinstance(obj, h5py.Dataset) else "Group")
         f.visititems(print_name)
 
-inspect_mat("NI2D_test/G3_exp1_1.mat")
 
 def loadmat(filename):
     with h5py.File(filename, 'r') as f:
@@ -84,12 +83,6 @@ def loadmat(filename):
     return t, x, xd, xdd, pex
 
 t,x,xd,xdd,pex = loadmat("NI2D_test/G7_exp1_3.mat")
-fnl_zero = lambda v, x: np.zeros_like(x)
-f1 = 6
-f2 = 40
 f = np.linspace(6,40,len(t))
-
-#xf, vf, af, fnlf_zero, ff = filterAndDifferentiate(x[:,0], xd[:,0], pex, t, fnl_zero, w1=5, w2=300)
 plt.plot(f,x)
-
 plt.show()

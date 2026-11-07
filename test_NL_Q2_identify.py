@@ -1,10 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from itertools import combinations_with_replacement
-
-import numpy as np
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D  
 import pandas as pd
 import os
 from lookmat import loadmat
@@ -27,7 +23,7 @@ K = np.array([[2e4, -1e4],
               [-1e4, 2e4]])
 
 #data_dir = ("C:/Users/emman/OneDrive/Bureau/ULg/MASTER_2/""Nonlinear_vibration/NI2D_test/")
-data_dir = ("C:/Users/leogo/OneDrive/Bureau/Master 2/Nonlinear Vibrations/Project/NI2D_test/")
+data_dir = ("C:/Users/leogo/OneDrive/Bureau/Master 2/Nonlinear Vibrations/")
 
 figure_dir = os.path.join(data_dir, "figures")
 os.makedirs(figure_dir, exist_ok=True)

@@ -3,9 +3,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import h5py
 
-import h5py
-
-
 def filterAndDifferentiate(x, v, f, t, fnl, w1 =5, w2 =500):
     """
     xf, vf, af, fnlf, fextf = filterAndDifferentiate(x, v, fext, t, fnl, w1 =100, w2 =500)

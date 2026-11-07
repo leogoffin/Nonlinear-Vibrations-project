@@ -1,9 +1,12 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from itertools import combinations_with_replacement
+from mpl_toolkits.mplot3d import Axes3D  
 import pandas as pd
 import os
 from lookmat import loadmat
+
+
 
 
 # q: (Ns, 2), déplacements
@@ -24,10 +27,11 @@ K = np.array([[2e4, -1e4],
 
 #data_dir = ("C:/Users/emman/OneDrive/Bureau/ULg/MASTER_2/""Nonlinear_vibration/NI2D_test/")
 data_dir = ("C:/Users/leogo/OneDrive/Bureau/Master 2/Nonlinear Vibrations/")
+data_dir = ("C:/Users/emman/OneDrive/Bureau/ULg/MASTER_2/Nonlinear_vibration/NI2D_test")
+
 
 figure_dir = os.path.join(data_dir, "figures")
 os.makedirs(figure_dir, exist_ok=True)
-
 
 # ===========================================================LOAD CSV FILES ============================================================
 
@@ -61,7 +65,8 @@ qddot1 = load_csv("dof1_qdotdot", "(m/s2)")
 qddot2 = load_csv("dof2_qdotdot", "(m/s2)")
 """
 
-t,q,qd,qdd,pex = loadmat("NI2D_test/G7_exp1_3.mat")
+file_path = os.path.join(data_dir, "G7_exp1_3.mat")
+t, q, qd, qdd, pex = loadmat(file_path)
 q1,q2 = q[:,0],q[:,1]
 qd1,qd2 = qd[:,0],qd[:,1]
 qdd1,qdd2 = qdd[:,0],qdd[:,1]
@@ -89,7 +94,11 @@ for name, signal in signals.items():
         print(f"{name}: {invalid.sum()} invalid values")
         print("First invalid indices:", np.where(invalid)[0][:10])
 
-# ============================================================DOWNSAMPLING ============================================================
+DOF_COLORS = {
+    0: "blue",
+    1: "red"}
+
+# =====================================DOWNSAMPLING ============================================================
 
 #keep 1 sample every 50
 step = 50
@@ -103,11 +112,11 @@ F_ext = F_ext[::step]
 print("Number of samples used:", len(t))
 
 
-# ==========================================================Q2a AND Q2b: RESIDUAL FORCES ============================================================
+# ===============================Q2a : Detection step ==================================== #
 
 def calculate_residual_forces(q, q_dot, q_ddot, F_ext, M, C, K):
     
-    F_nl = (F_ext- q_ddot @ M.T- q_dot @ C.T- q @ K.T)
+    F_nl = (F_ext- q_ddot @ M.T- q_dot @ C.T- q @ K.T) #nonlinear since it is non zero
 
     return F_nl
 
@@ -125,82 +134,146 @@ def calculate_residual_rms(F_nl):
 
 
 def plot_residual_forces(t, F_nl):
+    plt.rcParams.update({"text.usetex": True,
+                                "font.family": "serif",
+                                "font.serif": ["Computer Modern Roman"]
+                                })
     fig, ax = plt.subplots(2, 1, figsize=(9, 6), sharex=True)
+    
+    ax[0].plot(t, F_nl[:, 0], color='blue')
+    ax[0].set_ylabel("Residual force [N]", fontsize=20)
+    ax[0].set_title("DOF 1", fontsize=20)
+    ax[0].tick_params(axis='both', labelsize=20)
+    ax[0].grid(False)
 
-    ax[0].plot(t, F_nl[:, 0])
-    ax[0].set_ylabel("Residual force [N]")
-    ax[0].set_title("DOF 1")
-    ax[0].grid(True)
 
-    ax[1].plot(t, F_nl[:, 1])
-    ax[1].set_ylabel("Residual force [N]")
-    ax[1].set_xlabel("Time [s]")
-    ax[1].set_title("DOF 2")
-    ax[1].grid(True)
+    ax[1].plot(t, F_nl[:, 1], color='red')
+    ax[1].set_ylabel("Residual force [N]",fontsize=20)
+    ax[1].set_xlabel("Time [s]",fontsize=20)
+    ax[1].set_title("DOF 2",fontsize=20)
+    ax[1].tick_params(axis='both', labelsize=20)
+    ax[1].grid(False)
 
     plt.tight_layout()
     plt.savefig(os.path.join(figure_dir, "Residual_forces.pdf"),format="pdf")
+    #plt.savefig(r"C:/Users/emman/OneDrive/Bureau/ULg/MASTER_2/Nonlinear_vibration/Plot/Residual_forces.pdf", dpi=300)  
     return 
 
+# ========================== Q2b: Characterization step ============================ #
 
-def plot_asm_surface(q, q_dot, F_nl, dof=0):
-    #Acceleration Surface Method (ASM) :residual force versus displacement and velocity.
+def plot_asm_surface(q, q_dot, q_ddot, dof=0):
+
+    color = DOF_COLORS[dof]
+
+    plt.rcParams.update({
+        "text.usetex": True,
+        "font.family": "serif",
+        "font.serif": ["Computer Modern Roman"]
+    })
 
     fig = plt.figure(figsize=(8, 6))
     ax = fig.add_subplot(111, projection="3d")
 
-    ax.scatter(q[:, dof], q_dot[:, dof], F_nl[:, dof],s=8)
+    ax.scatter(
+        q[:, dof],
+        q_dot[:, dof],
+        q_ddot[:, dof],
+        s=8,
+        color=color
+    )
 
-    ax.set_xlabel(f"q{dof + 1} [m]")
-    ax.set_ylabel(f"q{dof + 1} dot [m/s]")
-    ax.set_zlabel("Residual force [N]")
-    ax.set_title(f"ASM - DOF {dof + 1}")
+    ax.set_xlabel(rf"$q_{dof+1}$ [m]", fontsize=20)
+    ax.set_ylabel(rf"$\dot{{q}}_{dof+1}$ [m/s]", fontsize=20)
+    ax.set_zlabel(rf"$\ddot{{q}}_{dof+1}$ [m/s$^2$]", fontsize=20)
+    #ax.set_title(f"ASM - DOF {dof+1}", fontsize=20)
+
+    ax.tick_params(axis="both", labelsize=15)
+
+    fig.tight_layout()
+
+    save_path = os.path.join(figure_dir, f"ASM_DOF{dof+1}.pdf")
+    #fig.savefig(save_path, format="pdf", dpi=300)
+    fig.savefig(save_path.replace(".pdf", ".png"), dpi=300)
+    return 
+  
+
+
+def plot_rfs_surface(q, q_dot, F_nl, dof=0):
+
+    color = DOF_COLORS[dof]
+    plt.rcParams.update({"text.usetex": True,
+                                        "font.family": "serif",
+                                        "font.serif": ["Computer Modern Roman"]
+                                        })
+    fig = plt.figure(figsize=(8, 6))
+    ax = fig.add_subplot(111, projection="3d")
+
+    ax.scatter(q[:, dof],q_dot[:, dof],F_nl[:, dof],s=8,color=color)
+
+    ax.set_xlabel(rf"$q_{dof+1}$ [m]", fontsize=20)
+    ax.set_ylabel(rf"$\dot{{q}}_{dof+1}$ [m/s]", fontsize=20)
+    ax.set_zlabel("Residual force [N]", fontsize=20)
+
+    #ax.set_title(f"RFS - DOF {dof+1}", fontsize=20)
+    ax.tick_params(axis="both", labelsize=15)
 
     plt.tight_layout()
-    plt.savefig(os.path.join(figure_dir, f"ASM_DOF{dof + 1}.pdf"),format="pdf")
+    #plt.savefig(os.path.join(figure_dir, f"RFS_DOF{dof+1}.pdf"),format="pdf")
+    #plt.savefig(f"C:/Users/emman/OneDrive/Bureau/ULg/MASTER_2/Nonlinear_vibration/Plot/RFS_DOF{dof + 1}.pdf", dpi=300) 
+    save_path = os.path.join(figure_dir, f"RFS_DOF{dof + 1}.pdf")
+    fig.savefig(save_path.replace(".pdf", ".png"), dpi=300)
+    
     return 
 
 
 def plot_residual_vs_displacement(q, F_nl, dof=0):
-
+    color = DOF_COLORS[dof]
+    plt.rcParams.update({"text.usetex": True,
+                                        "font.family": "serif",
+                                        "font.serif": ["Computer Modern Roman"]
+                                        })
     fig, ax = plt.subplots(figsize=(7, 5))
 
-    ax.scatter(q[:, dof], F_nl[:, dof], s=8)
-    ax.set_xlabel(f"q{dof + 1} [m]")
-    ax.set_ylabel("Residual force [N]")
-    ax.set_title(f"Residual force versus displacement - DOF {dof + 1}")
-    ax.grid(True)
+    ax.scatter(q[:, dof], F_nl[:, dof], s=8, color = color)
+    ax.set_xlabel(f"q{dof + 1} [m]",fontsize=20)
+    ax.set_ylabel("Residual force [N]",fontsize=20)
+    #ax.set_title(f"Residual force versus displacement - DOF {dof + 1}",fontsize=20)
+    ax.grid(False)
+    ax.tick_params(axis="both", labelsize=15)
 
     plt.tight_layout()
-    plt.savefig(os.path.join( figure_dir, f"Residual_vs_displacement_DOF{dof + 1}.pdf"),format="pdf")
+    #plt.savefig(os.path.join( figure_dir, f"Residual_vs_displacement_DOF{dof + 1}.pdf"),format="pdf")
+    plt.savefig(f"C:/Users/emman/OneDrive/Bureau/ULg/MASTER_2/Nonlinear_vibration/Plot/Residual_vs_displacement_DOF{dof + 1}.pdf", dpi=300) 
+    save_path = os.path.join(figure_dir, f"Residual_vs_displacement_DOF{dof + 1}.pdf")
+    fig.savefig(save_path.replace(".pdf", ".png"), dpi=300)
+    
     return 
 
 
-F_nl = calculate_residual_forces(q, q_dot, q_ddot, F_ext, M, C, K) 
+def plot_residual_vs_velocity(q_dot, F_nl, dof=0):
+    color = DOF_COLORS[dof]
+    plt.rcParams.update({"text.usetex": True,
+                                        "font.family": "serif",
+                                        "font.serif": ["Computer Modern Roman"]
+                                        })
+    fig, ax = plt.subplots(figsize=(7, 5))
 
-F_nl = calculate_residual_forces(q, q_dot, q_ddot, F_ext, M, C, K)
+    ax.scatter(q_dot[:, dof], F_nl[:, dof], s=8, color=color)
+    ax.set_xlabel(rf"$\dot{{q}}_{dof+1}$ [m/s]",fontsize=20)
+    ax.set_ylabel("Residual force [N]",fontsize=20)
+    #ax.set_title(f"Residual force versus velocity - DOF {dof + 1}",fontsize=20)
+    ax.grid(False)
 
-# Check the input data and residual force
-signals = {
-    "t": t,
-    "q": q,
-    "q_dot": q_dot,
-    "q_ddot": q_ddot,
-    "F_ext": F_ext,
-    "F_nl": F_nl
-}
+    ax.tick_params(axis="both", labelsize=15)
+    plt.tight_layout()
+    #plt.savefig(os.path.join( figure_dir, f"Residual_vs_velocity_DOF{dof + 1}.pdf"),format="pdf")
+    plt.savefig(f"C:/Users/emman/OneDrive/Bureau/ULg/MASTER_2/Nonlinear_vibration/Plot/Residual_vs_velocity_DOF{dof + 1}.pdf", dpi=300) 
+    save_path = os.path.join(figure_dir, f"Residual_vs_velocity_DOF{dof + 1}.pdf")
+    fig.savefig(save_path.replace(".pdf", ".png"), dpi=300)
+    
+    return
 
-rms_1, rms_2 = calculate_residual_rms(F_nl)
-plot_residual_forces(t, F_nl)
-
-#DOF 1
-plot_asm_surface(q, q_dot, F_nl, dof=0)
-plot_residual_vs_displacement(q, F_nl, dof=0)
-
-#DOF 2
-plot_asm_surface(q, q_dot, F_nl, dof=1)
-plot_residual_vs_displacement(q, F_nl, dof=1)
-
+#==========================================  Q2c ========================
 
 
 def calculate_restoring_force(q_ddot, F_ext, M, C, K, q, q_dot):
@@ -208,7 +281,7 @@ def calculate_restoring_force(q_ddot, F_ext, M, C, K, q, q_dot):
     return (F_ext- q_ddot @ M.T- q_dot @ C.T - q @ K.T)
 
 
-def build_rfs_basis(q, q_dot, max_degree=5):
+def build_rfs_basis(q, q_dot, max_degree=7):
 
     variables = np.column_stack((
         q[:, 0],
@@ -418,21 +491,29 @@ def plot_rfs_results(results, time=None):
     else:
         xlabel = "Time [s]"
 
+    plt.rcParams.update({"text.usetex": True,
+                            "font.family": "serif",
+                            "font.serif": ["Computer Modern Roman"]
+                            })
     fig, axes = plt.subplots(2, 1, figsize=(10, 7), sharex=True)
-
     axes[0].plot(time, y, label="Calculated RFS")
     axes[0].plot(time, y_pred, "--", label="Reconstructed RFS")
-    axes[0].set_ylabel("Force [N]")
-    axes[0].legend()
-    axes[0].grid(True)
+
+    axes[0].set_ylabel("Force [N]", fontsize=20)
+    axes[0].legend(fontsize=16)
+    axes[0].tick_params(axis="both", labelsize=15)
+    axes[0].grid(False)
 
     axes[1].plot(time, residual)
-    axes[1].set_xlabel(xlabel)
-    axes[1].set_ylabel("Residual [N]")
-    axes[1].grid(True)
 
+    axes[1].set_xlabel(xlabel, fontsize=20)
+    axes[1].set_ylabel("Residual [N]", fontsize=20)
+    axes[1].tick_params(axis="both", labelsize=15)
+    axes[1].grid(False)
     plt.tight_layout()
-    plt.savefig(f"RFS_DOF{results['dof'] + 1}.pdf",dpi=300,bbox_inches="tight")
+    #plt.savefig(f"RFS_DOF{results['dof'] + 1}.pdf",dpi=300,bbox_inches="tight")
+    save_path = os.path.join(figure_dir, f"RFS_DOF{results['dof'] + 1}.pdf")
+    fig.savefig(save_path.replace(".pdf", ".png"), dpi=300)
     #plt.show()
 
 
@@ -565,8 +646,9 @@ def plot_coefficient_matrix(results_1, results_2):
         format="pdf",
         bbox_inches="tight"
     )
-
-    plt.close(fig)
+    save_path = os.path.join(figure_dir, f"Coefficient_matrix.pdf")
+    fig.savefig(save_path.replace(".pdf", ".png"), dpi=300)
+    return
 
 def plot_relative_contribution(results_1, results_2, q, q_dot):
 
@@ -680,21 +762,59 @@ def plot_relative_contribution(results_1, results_2, q, q_dot):
         format="pdf",
         bbox_inches="tight"
     )
+    save_path = os.path.join(figure_dir, f"Relative_contribution_matrix.pdf")
+    fig.savefig(save_path.replace(".pdf", ".png"), dpi=300)
+    return 
+    
 
-    plt.close(fig)
 
-F_RFS = calculate_restoring_force(q_ddot, F_ext, M, C, K, q, q_dot)
 
-results_1 = identify_rfs(q, q_dot, F_RFS, dof=0, max_degree=7)
-results_2 = identify_rfs(q, q_dot, F_RFS, dof=1, max_degree=7)
+#============================ MAIN ======================
+if __name__ == "__main__":
 
-print_rfs_results(results_1)
-plot_rfs_results(results_1, time=t)
-print_nonlinear_terms_for_ni2d(results_1)
+    """---Q2a---"""
+    F_nl = calculate_residual_forces(q, q_dot, q_ddot, F_ext, M, C, K) 
+    # Check the input data and residual force
+   
+    #rms_1, rms_2 = calculate_residual_rms(F_nl)
+    #plot_residual_forces(t, F_nl)
 
-print_rfs_results(results_2)
-plot_rfs_results(results_2, time=t)
-print_nonlinear_terms_for_ni2d(results_2)
+    """---Q2b---"""
+    #DOF 1
+   
+    #plot_asm_surface(q, q_dot, q_ddot, dof=0)
+    
+    #plot_residual_vs_displacement(q, F_nl, dof=0)
+    #plot_residual_vs_velocity(q_dot, F_nl, dof=0)
+    
+    #DOF 2
+    #plot_asm_surface(q, q_dot, q_ddot, dof=1)
+   
+    #plot_residual_vs_displacement(q, F_nl, dof=1)
+    #plot_residual_vs_velocity(q_dot, F_nl, dof=1)
+    
+    
+   
 
-plot_coefficient_matrix(results_1, results_2)
-plot_relative_contribution(results_1, results_2, q, q_dot)
+    """Q2c"""
+    #plot_rfs_surface(q, q_dot, F_nl, dof=0)
+    #plot_rfs_surface(q, q_dot, F_nl, dof=1)
+    
+    F_RFS = calculate_restoring_force(q_ddot, F_ext, M, C, K, q, q_dot)
+
+    results_1 = identify_rfs(q, q_dot, F_RFS, dof=0, max_degree=7)
+    results_2 = identify_rfs(q, q_dot, F_RFS, dof=1, max_degree=7)
+
+    print_rfs_results(results_1)
+    plot_rfs_results(results_1, time=t)
+    print_nonlinear_terms_for_ni2d(results_1)
+
+    print_rfs_results(results_2)
+    plot_rfs_results(results_2, time=t)
+    print_nonlinear_terms_for_ni2d(results_2)
+
+    plot_coefficient_matrix(results_1, results_2)
+    plot_relative_contribution(results_1, results_2, q, q_dot)
+   
+    plt.show()
+    

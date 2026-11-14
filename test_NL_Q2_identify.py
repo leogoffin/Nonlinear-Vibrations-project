@@ -26,8 +26,8 @@ K = np.array([[2e4, -1e4],
               [-1e4, 2e4]])
 
 #data_dir = ("C:/Users/emman/OneDrive/Bureau/ULg/MASTER_2/""Nonlinear_vibration/NI2D_test/")
-data_dir = ("C:/Users/leogo/OneDrive/Bureau/Master 2/Nonlinear Vibrations/")
-data_dir = ("C:/Users/emman/OneDrive/Bureau/ULg/MASTER_2/Nonlinear_vibration/NI2D_test")
+data_dir = ("C:/Users/leogo/OneDrive/Bureau/Master 2/Nonlinear Vibrations/signals")
+#data_dir = ("C:/Users/emman/OneDrive/Bureau/ULg/MASTER_2/Nonlinear_vibration/NI2D_test")
 
 
 figure_dir = os.path.join(data_dir, "figures")
@@ -50,7 +50,7 @@ def load_csv(filename, key):
 
     return df[key].to_numpy(dtype=np.float64)
 
-"""
+
 t = load_csv("dof1_q", "Time (s)")
 F1 = load_csv("dof1_force", "Force (N)")
 F2 = np.zeros_like(F1)
@@ -63,28 +63,30 @@ qdot2 = load_csv("dof2_qdot", "(m/s)")
 
 qddot1 = load_csv("dof1_qdotdot", "(m/s2)")
 qddot2 = load_csv("dof2_qdotdot", "(m/s2)")
-"""
 
-file_path = os.path.join(data_dir, "G7_exp1_3.mat")
-t, q, qd, qdd, pex = loadmat(file_path)
-q1,q2 = q[:,0],q[:,1]
-qd1,qd2 = qd[:,0],qd[:,1]
-qdd1,qdd2 = qdd[:,0],qdd[:,1]
+if 0 :
+    file_path = os.path.join(data_dir, "G7_exp1_3.mat")
+    t, q, qd, qdd, pex = loadmat(file_path)
+    q1,q2 = q[:,0],q[:,1]
+    qdot1,qdot2 = qd[:,0],qd[:,1]
+    qddot1,qddot2 = qdd[:,0],qdd[:,1]
 
 #one row per time sample
 q = np.column_stack((q1, q2))
-q_dot = np.column_stack((qd1, qd2))
-q_ddot = np.column_stack((qdd1, qdd2))
-F_ext = np.column_stack((pex, np.zeros_like(pex)))
+q_dot = np.column_stack((qdot1, qdot2))
+q_ddot = np.column_stack((qddot1, qddot2))
+#F_ext = np.column_stack((pex, np.zeros_like(pex)))
+F_ext = np.column_stack((F1, F2))
+
 
 signals = {
     "q1": q1,
     "q2": q2,
-    "qdot1": qd1,
-    "qdot2": qd2,
-    "qddot1": qdd1,
-    "qddot2": qdd2,
-    "F1": pex,
+    "qdot1": qdot1,
+    "qdot2": qdot2,
+    "qddot1": qddot1,
+    "qddot2": qddot2,
+    "F1": F1,
     "t": t
 }
 
@@ -490,11 +492,12 @@ def plot_rfs_results(results, time=None):
         xlabel = "Sample"
     else:
         xlabel = "Time [s]"
-
+    """
     plt.rcParams.update({"text.usetex": True,
                             "font.family": "serif",
                             "font.serif": ["Computer Modern Roman"]
                             })
+    """
     fig, axes = plt.subplots(2, 1, figsize=(10, 7), sharex=True)
     axes[0].plot(time, y, label="Calculated RFS")
     axes[0].plot(time, y_pred, "--", label="Reconstructed RFS")

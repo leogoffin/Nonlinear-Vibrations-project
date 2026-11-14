@@ -26,8 +26,8 @@ K = np.array([[2e4, -1e4],
               [-1e4, 2e4]])
 
 #data_dir = ("C:/Users/emman/OneDrive/Bureau/ULg/MASTER_2/""Nonlinear_vibration/NI2D_test/")
-data_dir = ("C:/Users/leogo/OneDrive/Bureau/Master 2/Nonlinear Vibrations/signals")
-#data_dir = ("C:/Users/emman/OneDrive/Bureau/ULg/MASTER_2/Nonlinear_vibration/NI2D_test")
+#data_dir = ("C:/Users/leogo/OneDrive/Bureau/Master 2/Nonlinear Vibrations/")
+#data_dir = ("C:/Users/emman/OneDrive/Bureau/ULg/MASTER_2/Nonlinear_vibration/NI2D_q1q2")
 
 
 figure_dir = os.path.join(data_dir, "figures")
@@ -52,25 +52,25 @@ def load_csv(filename, key):
 
 
 t = load_csv("dof1_q", "Time (s)")
-F1 = load_csv("dof1_force", "Force (N)")
-F2 = np.zeros_like(F1)
+pex = load_csv("dof1_force", "Force (N)")
+F2 = np.zeros_like(pex)
 
 q1 = load_csv("dof1_q", "(m)")
 q2 = load_csv("dof2_q", "(m)")
 
-qdot1 = load_csv("dof1_qdot", "(m/s)")
-qdot2 = load_csv("dof2_qdot", "(m/s)")
+qd1 = load_csv("dof1_qdot", "(m/s)")
+qd2 = load_csv("dof2_qdot", "(m/s)")
 
-qddot1 = load_csv("dof1_qdotdot", "(m/s2)")
-qddot2 = load_csv("dof2_qdotdot", "(m/s2)")
+qdd1 = load_csv("dof1_qdotdot", "(m/s2)")
+qdd2 = load_csv("dof2_qdotdot", "(m/s2)")
+"""
 
-if 0 :
-    file_path = os.path.join(data_dir, "G7_exp1_3.mat")
-    t, q, qd, qdd, pex = loadmat(file_path)
-    q1,q2 = q[:,0],q[:,1]
-    qdot1,qdot2 = qd[:,0],qd[:,1]
-    qddot1,qddot2 = qdd[:,0],qdd[:,1]
-
+file_path = os.path.join(data_dir, "G7_exp1_3.mat")
+t, q, qd, qdd, pex = loadmat(file_path)
+q1,q2 = q[:,0],q[:,1]
+qd1,qd2 = qd[:,0],qd[:,1]
+qdd1,qdd2 = qdd[:,0],qdd[:,1]
+"""
 #one row per time sample
 q = np.column_stack((q1, q2))
 q_dot = np.column_stack((qdot1, qdot2))
@@ -283,7 +283,7 @@ def calculate_restoring_force(q_ddot, F_ext, M, C, K, q, q_dot):
     return (F_ext- q_ddot @ M.T- q_dot @ C.T - q @ K.T)
 
 
-def build_rfs_basis(q, q_dot, max_degree=7):
+def build_rfs_basis(q, q_dot, max_degree=5):
 
     variables = np.column_stack((
         q[:, 0],
@@ -562,8 +562,8 @@ def print_nonlinear_terms_for_ni2d(results):
         for coefficient, expression in terms
     )
 
-    print(f"\nF_nl[{dof}] = {force_expression}")
-
+    #print(f"\nF_nl[{dof}] = {force_expression}")
+"""
 def plot_coefficient_matrix(results_1, results_2):
 
     results = [results_1, results_2]
@@ -770,6 +770,222 @@ def plot_relative_contribution(results_1, results_2, q, q_dot):
     return 
     
 
+"""
+
+def plot_coefficient_matrix(results_1, results_2):
+
+    results = [results_1, results_2]
+
+    # Determine matrix size
+    max_exp = 0
+
+    for result in results:
+        for powers in result["exponents"]:
+            max_exp = max(max_exp, int(np.max(powers[:2])))
+
+    n = max_exp + 1
+
+    fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+
+    cmap = plt.cm.viridis.copy()
+    cmap.set_bad("lightgrey")
+
+    for dof, result in enumerate(results):
+
+        coefficients = np.full((n, n), np.nan)
+
+        # Fill coefficient matrix
+        for powers, coefficient in zip(
+            result["exponents"], result["coefficients"]
+        ):
+
+            x = int(powers[0])
+            y = int(powers[1])
+
+            # Keep the coefficient with the largest magnitude
+            if (
+                np.isnan(coefficients[y, x])
+                or abs(coefficient) > abs(coefficients[y, x])
+            ):
+                coefficients[y, x] = coefficient
+
+        # Logarithmic scale
+        
+        log_coefficients = np.full((n, n), np.nan)
+
+        valid = np.isfinite(coefficients) & (coefficients != 0)
+
+        log_coefficients[valid] = np.log10(np.abs(coefficients[valid]))
+
+        im = axes[dof].imshow(
+            log_coefficients,
+            origin="lower",
+            cmap=cmap,
+            aspect="equal"
+        )
+
+        # Annotations
+        for i in range(n):
+            for j in range(n):
+
+                if np.isfinite(coefficients[i, j]):
+                    axes[dof].text(
+                        j, i,
+                        f"{coefficients[i, j]:.1e}",
+                        ha="center",
+                        va="center",
+                        fontsize=8,
+                        color="white"
+                    )
+
+        axes[dof].set_xticks(range(n))
+        axes[dof].set_yticks(range(n))
+
+        axes[dof].set_xlabel(r"Exponent of $q_1$")
+        axes[dof].set_ylabel(r"Exponent of $q_2$")
+
+        axes[dof].set_title(f"DOF {dof + 1}")
+
+        fig.colorbar(
+            im,
+            ax=axes[dof],
+            label=r"$\log_{10}(|c|)$"
+        )
+
+    fig.suptitle("Identified nonlinear coefficient matrices")
+
+    plt.tight_layout()
+
+    plt.savefig(
+        os.path.join(figure_dir, "Coefficient_matrix.pdf"),
+        format="pdf",
+        bbox_inches="tight"
+    )
+
+    save_path = os.path.join(figure_dir, "Coefficient_matrix.pdf")
+    fig.savefig(save_path.replace(".pdf", ".png"), dpi=300)
+
+    return
+
+
+def plot_relative_contribution(results_1, results_2, q, q_dot):
+
+    results = [results_1, results_2]
+
+    # Determine matrix size
+    max_exp = 0
+
+    for result in results:
+        for powers in result["exponents"]:
+            max_exp = max(max_exp, int(np.max(powers[:2])))
+
+    n = max_exp + 1
+
+    fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+
+    cmap = plt.cm.viridis.copy()
+    cmap.set_bad("lightgrey")
+
+    variables = np.column_stack((q, q_dot))
+
+    for dof, result in enumerate(results):
+
+        contributions = np.zeros((n, n))
+
+        # Calculate contribution of each term
+        for powers, coefficient in zip(
+            result["exponents"], result["coefficients"]
+        ):
+
+            x = int(powers[0])
+            y = int(powers[1])
+
+            term = coefficient * np.prod(
+                variables**powers,
+                axis=1
+            )
+
+            contributions[y, x] += np.mean(term**2) if False else 0
+
+            if "group_signals" not in locals():
+                group_signals = {}
+
+            key = (x, y)
+
+            if key not in group_signals:
+                group_signals[key] = np.zeros(len(q))
+
+            group_signals[key] += term
+
+        # Calculate RMS of each combination
+        total_contribution = 0
+
+        for (x, y), signal in group_signals.items():
+
+            contributions[y, x] = np.sqrt(np.mean(signal**2))
+            total_contribution += contributions[y, x]
+
+        group_signals = {}
+
+        # Convert to relative percentages
+        if total_contribution > 0:
+            contributions = 100 * contributions / total_contribution
+
+        # Plot
+        contributions_plot = np.ma.masked_where(
+            contributions == 0,
+            contributions
+        )
+
+        im = axes[dof].imshow(
+            contributions_plot,
+            origin="lower",
+            cmap=cmap,
+            aspect="equal",
+            vmin=0
+        )
+
+        for i in range(n):
+            for j in range(n):
+
+                if contributions[i, j] > 0:
+                    axes[dof].text(
+                        j, i,
+                        f"{contributions[i, j]:.1f}%",
+                        ha="center",
+                        va="center",
+                        fontsize=8,
+                        color="white"
+                    )
+
+        axes[dof].set_xticks(range(n))
+        axes[dof].set_yticks(range(n))
+
+        axes[dof].set_xlabel(r"Exponent of $q_1$")
+        axes[dof].set_ylabel(r"Exponent of $q_2$")
+
+        axes[dof].set_title(f"DOF {dof + 1}")
+
+        fig.colorbar(
+            im,
+            ax=axes[dof],
+            label="Relative contribution [%]"
+        )
+
+    fig.suptitle("Relative nonlinear force contributions")
+
+    plt.tight_layout()
+
+    plt.savefig(
+        os.path.join(figure_dir, "Relative_contribution_matrix.pdf"),
+        format="pdf",
+        bbox_inches="tight"
+    )
+
+    save_path = os.path.join(figure_dir, "Relative_contribution_matrix.pdf")
+    fig.savefig(save_path.replace(".pdf", ".png"), dpi=300)
+
+    return
 
 
 #============================ MAIN ======================
@@ -805,8 +1021,8 @@ if __name__ == "__main__":
     
     F_RFS = calculate_restoring_force(q_ddot, F_ext, M, C, K, q, q_dot)
 
-    results_1 = identify_rfs(q, q_dot, F_RFS, dof=0, max_degree=7)
-    results_2 = identify_rfs(q, q_dot, F_RFS, dof=1, max_degree=7)
+    results_1 = identify_rfs(q, q_dot, F_RFS, dof=0, max_degree=5)
+    results_2 = identify_rfs(q, q_dot, F_RFS, dof=1, max_degree=5)
 
     print_rfs_results(results_1)
     plot_rfs_results(results_1, time=t)
@@ -818,6 +1034,23 @@ if __name__ == "__main__":
 
     plot_coefficient_matrix(results_1, results_2)
     plot_relative_contribution(results_1, results_2, q, q_dot)
-   
+    force_sum = F_RFS[:, 0] + F_RFS[:, 1]
+
+    #print("RMS force DOF 1:", np.sqrt(np.mean(F_RFS[:, 0]**2)))
+    #print("RMS force DOF 2:", np.sqrt(np.mean(F_RFS[:, 1]**2)))
+    #print("RMS force sum:", np.sqrt(np.mean(force_sum**2)))
+    # Display all identified terms with zero displacement exponents
+
+    for powers, coefficient in zip(
+        results_1["exponents"],
+        results_1["coefficients"]
+    ):
+
+        if powers[0] == 0 and powers[1] == 0:
+
+            print(
+                f"Coefficient: {coefficient:.6e} | "
+                f"Exponents: {powers}"
+            )
     plt.show()
     

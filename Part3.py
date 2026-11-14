@@ -2,6 +2,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 from hbm_pseudo_arclength import hbm_pseudo_arclength, plot_nlfr
 from scipy.optimize import least_squares
+from lookmat import loadmat
+import os
+import numpy as np
+import pandas as pd
+
+DATA_DIR = r"C:\Users\leogo\OneDrive\Bureau\Master 2\Nonlinear Vibrations\signals"
+MAT_FILENAME = "G7_exp1_3.mat"
+FIGURE_DIR = os.path.join(DATA_DIR, "figures_simulate")
 
 M = np.array([[1, 0],
               [0, 1]])
@@ -13,7 +21,7 @@ K = np.array([[2e4, -1e4],
               [-1e4, 2e4]])
 
 
-F0 = 100.0
+F0 = 20.0
 k4 = 6.7e5
 k3 = 3.3e6
 
@@ -165,6 +173,28 @@ plt.plot(result["frequency_hz"], result["amplitude"][:, 0], label="NLFR", linewi
 plt.plot(freq_nnm1, amp_nnm1, "--", label="NNM 1")
 plt.plot(freq_nnm2, amp_nnm2, "--", label="NNM 2")
 
+plt.xlabel("Frequency (Hz)")
+plt.ylabel("DOF 1 displacement amplitude")
+plt.xlim(min(result["frequency_hz"]), max(result["frequency_hz"]))
+plt.legend()
+plt.show()
+
+
+
+t, q, v, a, force = loadmat(os.path.join(DATA_DIR, MAT_FILENAME))
+t = np.asarray(t, dtype=float).reshape(-1)
+f = np.linspace(6,40,len(t))
+q = np.asarray(q, dtype=float)
+v = np.asarray(v, dtype=float)
+a = np.asarray(a, dtype=float)
+force = np.asarray(force, dtype=float)
+if force.ndim == 1 or (force.ndim == 2 and 1 in force.shape):
+    f1 = force.reshape(-1)
+    force = np.column_stack((f1, np.zeros_like(f1)))
+
+plt.figure()
+plt.plot(result["frequency_hz"], result["amplitude"][:, 0], label="NLFR", linewidth=2)
+plt.plot(f,q[:,0],label = "Sine sweep", alpha = 0.5)
 plt.xlabel("Frequency (Hz)")
 plt.ylabel("DOF 1 displacement amplitude")
 plt.xlim(min(result["frequency_hz"]), max(result["frequency_hz"]))

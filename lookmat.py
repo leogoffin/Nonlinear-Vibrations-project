@@ -80,13 +80,3 @@ def loadmat(filename):
 
     return t, x, xd, xdd, pex
 
-#t,x,xd,xdd,pex = loadmat("NI2D_test/G7_exp1_3.mat")
-#data_dir = "C:/Users/emman/OneDrive/Bureau/ULg/MASTER_2/Nonlinear_vibration/NI2D_test"
-
-file_path = os.path.join(data_dir, "G7_exp1_3.mat")
-
-t, x, xd, xdd, pex = loadmat(file_path)
-f = np.linspace(6,40,len(t))
-plt.plot(f,x)
-plt.show()
-"""

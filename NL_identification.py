@@ -26,7 +26,7 @@ from scipy.signal import spectrogram
 # SETTINGS — edit these
 # ============================================================================
 DATA_DIR = r"C:\Users\leogo\OneDrive\Bureau\Master 2\Nonlinear Vibrations\signals"
-FILE_TYPE = "csv"                      # "csv" or "mat"
+FILE_TYPE = "mat"                      # "csv" or "mat"
 MAT_FILENAME = "G7_exp1_3.mat"
 FIGURE_DIR = os.path.join(DATA_DIR, "figures_characterization")
 
@@ -43,10 +43,9 @@ TRAIN_FRACTION = 0.75                 # First 75% train, last 25% validate
 # q_abs means q*abs(q)**(n-1), useful for sign-symmetric odd restoring forces
 # at even n; v_abs similarly for dissipative drag-like models.
 # Plain q/v powers include even powers for asymmetric nonlinearities.
-
 SELECTED_TERMS = [
-    ("between", "q", 5),
-    ("between", "v", 5),
+    ("mass2", "q", 3),
+    ("mass1", "q", 4)
 ]
 
 M = np.eye(2)
@@ -256,8 +255,8 @@ def build_joint_matrix(q, v, terms):
     n = len(q)
     X = np.zeros((2*n, len(terms)))
     for j, (location, kind, degree) in enumerate(terms):
-        if not isinstance(degree, (int, np.integer)) or degree < 2 or degree > 7:
-            raise ValueError("Degree must be an integer between 2 and 7")
+        #if not isinstance(degree, (int, np.integer)) or degree < 2 or degree > 7:
+            #raise ValueError("Degree must be an integer between 2 and 7")
         signal = candidate_signal(q, v, location, kind, degree)
         if location == "mass1":
             X[:n, j] = signal
@@ -300,7 +299,7 @@ def fit_model(q, v, fnl, terms, train_fraction=0.75):
 
     print("\n=== 2c: COEFFICIENT ESTIMATION ===")
     for term, coeff in zip(terms, coefficients):
-        print(f"{term!s:32s}: {coeff:+.8e} (SI units)")
+        print(f"{term!s:32s}: {coeff:+.3e} (SI units)")
     print(f"Selected terms: {len(terms)}; numerical rank: {rank}")
     if singular[-1] > 0:
         print(f"Normalized matrix condition number: {singular[0]/singular[-1]:.3e}")
@@ -396,6 +395,18 @@ def main():
         print("WARNING: decimation may hide higher-frequency harmonics in spectrograms")
     print("NOTE: supplied accelerations are used directly, not differentiated again")
     fnl = nonlinear_force(q, v, a, force)
+    qr = q[:, 0] - q[:, 1]
+    vr = v[:, 0] - v[:, 1]
+
+    F_rel = (fnl[:, 0] - fnl[:, 1]) / 2
+
+    F_remaining = F_rel 
+
+    plt.figure()
+    plt.scatter(vr, F_remaining, s=4)
+    plt.xlabel("Relative velocity (m/s)")
+    plt.ylabel("Remaining nonlinear force (N)")
+    plt.show()
     characterize(t, q, v, a, force, fnl)
     if RUN_ESTIMATION:
         fitted = fit_model(q, v, fnl, SELECTED_TERMS, TRAIN_FRACTION)

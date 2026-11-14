@@ -257,6 +257,9 @@ def hbm_pseudo_arclength(M,C,K,
             if trial_step < ds_min:
                 break
 
+        if not accepted:
+            print("Continuation failed at omega =", y_current[-1] * scale[-1])
+            break
         y_new = solution.x
         y_points.append(y_new.copy())
         corrector_nfev.append(int(solution.nfev))
@@ -301,5 +304,5 @@ def plot_nlfr(result, dof=0):
 
     plt.plot(result["frequency_hz"], result["amplitude"][:, dof])
     plt.xlabel("Excitation frequency (Hz)")
-    plt.ylabel(f"First-harmonic amplitude, DOF {dof} (displacement units)")
+    plt.ylabel(f"Displacement amplitude, DOF {dof+1}")
     plt.xlim(min(result["frequency_hz"]),max(result["frequency_hz"]))

@@ -15,7 +15,6 @@ from general_functions import *
 M = np.array([[1, 0], [0, 1]])
 C = np.array([[3, -1], [-1, 3]])
 K = np.array([[2e4, -1e4], [-1e4, 2e4]])
-F0 = 20.0
 k4 = 6.7e5
 k3 = 3.3e6
 
@@ -346,7 +345,7 @@ def plot_NNM(F0,figure_dir):
 
     plt.axhline(1, color='black', linestyle='--',label='LNM 1',alpha = 0.6)
     plt.axhline(-1, color='black', linestyle='-.',label='LNM 2',alpha = 0.6)
-    plt.xlabel(r'q1_0 (m)')
+    plt.xlabel(r'Initial displacement q1 (m)')
     plt.ylabel(r'$A_1/A_2$')
     plt.legend()
     savefig("mode_shapes.pdf",figure_dir)
@@ -366,4 +365,4 @@ def plot_comparison_sinesweep(F0,mat_file,figure_dir,direction = "forward"):
     plt.xlim(6,40)
     plt.ylim(0)
     plt.legend()
-    savefig("comp_sinesweep.pdf",figure_dir)
+    savefig("comp_sinesweep_"+ direction + ".pdf",figure_dir)

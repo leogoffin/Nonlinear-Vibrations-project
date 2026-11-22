@@ -15,13 +15,15 @@ project_dir = Path(__file__).resolve().parent
 figure_dir =project_dir.parent / "Figs"
 figure_dir_Q2 = figure_dir / "Q2"
 figure_dir_Q3 = figure_dir / "Q3"
-file_path = project_dir.parent / "Signals" / "G7_exp2_2.mat"
+signals_path = project_dir.parent / "Signals" 
 
+do_Q2 = False
+do_Q3 = True
 
 def main():
     set_plot_params(20)
 
-    t, q, q_dot, q_ddot, f_ext= loadmat(file_path)
+    t, q, q_dot, q_ddot, f_ext= loadmat(signals_path / "G7_exp2_1.mat")
     print_signal(t, q, q_dot, q_ddot, f_ext)
     plot_signal(t, q, q_dot, q_ddot, f_ext, figure_dir_Q2)
 
@@ -38,39 +40,45 @@ def main():
    
     f_nl = Q2.calculate_residual_forces(q, q_dot, q_ddot, f_ext)
 
-    #Q2a
-    Q2.detect_nonlinearity(t, f_nl, figure_dir_Q2)
+    if do_Q2 :
+        #Q2a
+        Q2.detect_nonlinearity(t, f_nl, figure_dir_Q2)
 
-    #Q2b
-    Q2.characterize_nonlinearity(t, q, q_dot, q_ddot, f_nl, figure_dir_Q2)
+        #Q2b
+        Q2.characterize_nonlinearity(t, q, q_dot, q_ddot, f_nl, figure_dir_Q2)
 
-    #Q2c-I: explore all polynomial candidates
-    Q2.explore_all_nonlinearities(q, q_dot, f_nl, exploration_degree, figure_dir_Q2)
-    
-    selected_terms = [("mass2", "q", 3),
-                      ("mass2", "q", 5),
-                      ("mass1", "q", 4)]
-    
+        #Q2c-I: explore all polynomial candidates
+        Q2.explore_all_nonlinearities(q, q_dot, f_nl, exploration_degree, figure_dir_Q2)
+        
+        selected_terms = [("mass2", "q", 3),
+                        ("mass2", "q", 5),
+                        ("mass1", "q", 4)]
+        
 
-    #Q2c-II: fit physically selected terms
-    predicted, coefficients, contributions, n_train = Q2.fit_model(q, q_dot, f_nl, selected_terms)
+        #Q2c-II: fit physically selected terms
+        predicted, coefficients, contributions, n_train = Q2.fit_model(q, q_dot, f_nl, selected_terms)
 
-    #Q2c: validation
-    Q2.plot_rfs_validation(q, f_nl, predicted, n_train, figure_dir_Q2)
-    Q2.plot_term_contributions(t, f_nl, predicted, figure_dir_Q2)
+        #Q2c: validation
+        Q2.plot_rfs_validation(q, f_nl, predicted, n_train, figure_dir_Q2)
+        Q2.plot_term_contributions(t, f_nl, predicted, figure_dir_Q2)
 
-    # Q3a : Non-Linear Frequency Response
-    F0 = 100
-    Q3.plot_NLFR(F0,figure_dir_Q3)
+    if do_Q3 : 
+        # Q3a : Non-Linear Frequency Response
+        F0 = 100
+        Q3.plot_NLFR(F0,figure_dir_Q3)
 
-    # Q3b-Q3c : Non-linear Normal Modes
-    Q3.plot_NNM(F0,figure_dir_Q3) 
+        # Q3b-Q3c : Non-linear Normal Modes
+        Q3.plot_NNM(F0,figure_dir_Q3) 
 
-    # Q3d : Superposition with sinesweep
-    Q3.plot_comparison_sinesweep(F0,file_path,figure_dir_Q3,direction = "backward")
+        # Q3d : Superposition with sinesweep
+        forward_sweep = signals_path / "G7_exp2_1.mat"
+        Q3.plot_comparison_sinesweep(F0,forward_sweep,figure_dir_Q3,direction = "forward")
 
-    # Q3e : Bassin of attraction
-    # TODO 
+        backward_sweep = signals_path / "G7_exp2_2.mat"
+        Q3.plot_comparison_sinesweep(F0,backward_sweep,figure_dir_Q3,direction = "backward")
+
+        # Q3e : Bassin of attraction
+        # TODO 
     return 
 
 

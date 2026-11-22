@@ -36,3 +36,20 @@ Signal 3 : sinesweep  6 Hz -> 40 Hz
 sinesweep_experiment(F0 = 250,f_start=6 ,f_end=40,sweep_rate=0.1,filename="exp1_signal1")
 sinesweep_experiment(F0 = 250,f_start=40,f_end=6 ,sweep_rate=0.1,filename="exp1_signal2")
 sinesweep_experiment(F0 = 20 ,f_start=6 ,f_end=40,sweep_rate=0.1,filename="exp1_signal3")
+
+
+"""
+Experiment 2 : 
+Dof 1 excited 
+Linear sweep rate : 6 Hz/min = 0.1 Hz/sec
+
+F = 250 N
+Signal 1 : sinesweep  6 Hz -> 40 Hz
+Signal 2 : sinesweep 40 Hz ->  6 Hz
+
+F = 20 N
+Signal 3 : sinesweep  6 Hz -> 40 Hz
+"""
+sinesweep_experiment(F0 = 100,f_start=6 ,f_end=40,sweep_rate=0.1,filename="exp2_signal1")
+sinesweep_experiment(F0 = 100,f_start=40,f_end=6 ,sweep_rate=0.1,filename="exp2_signal2")
+sinesweep_experiment(F0 = 50,f_start=6 ,f_end=40,sweep_rate=0.1,filename="exp2_signal3")

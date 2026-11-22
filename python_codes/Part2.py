@@ -1,9 +1,9 @@
 #==================================================
 
-#AERO0035-1 Nonlinear Vibrations of Aerospace Structures
+# AERO0035-1 Nonlinear Vibrations of Aerospace Structures
 # Part 2 : Identify
-#2026-2027 Project
-#Authors: Leo Goffin, Emmanuelle Henrion, Anaelle Sohier
+# 2026-2027 Project
+# Authors: Leo Goffin, Emmanuelle Henrion, Anaelle Sohier
 
 #==================================================
 """
@@ -102,6 +102,7 @@ def detect_nonlinearity(t, f_nl, figure_dir):
         fig.tight_layout()
         file_path = Path(figure_dir) / f"Q2a_residual_DOF{dof+1}.pdf"
         fig.savefig(file_path, bbox_inches="tight")
+        plt.close(fig)
 
     return 
 
@@ -139,6 +140,7 @@ def characterize_nonlinearity(t, q, q_dot, q_ddot, f_nl, figure_dir):
 
         file_path = figure_dir / f"Q2b_force_vs_displacement_DOF{dof+1}.pdf"
         fig.savefig(file_path, bbox_inches="tight")
+        plt.close(fig)
         
         
         # Force versus velocity
@@ -157,6 +159,7 @@ def characterize_nonlinearity(t, q, q_dot, q_ddot, f_nl, figure_dir):
 
         file_path = figure_dir / f"Q2b_force_vs_velocity_DOF{dof+1}.pdf"
         fig.savefig(file_path, bbox_inches="tight")
+        plt.close(fig)
         
 
         #3D STATE-SPACE TRAJECTORY
@@ -178,6 +181,7 @@ def characterize_nonlinearity(t, q, q_dot, q_ddot, f_nl, figure_dir):
 
         file_path = figure_dir / f"Q2b_ASM_DOF{dof+1}.pdf"
         fig.savefig(file_path, bbox_inches="tight", pad_inches=0.3)
+        plt.close(fig)
         
     return 
 
@@ -517,6 +521,7 @@ def plot_exploratory_tables(matrix, powers, labels, coefficients, dof, explorati
         fig.tight_layout()
         file_path = Path(figure_dir) / f"Q2c_exploration_{kind}_DOF{dof+1}.pdf"
         fig.savefig(file_path, bbox_inches="tight")
+        plt.close(fig)
         
 
 
@@ -794,6 +799,7 @@ def plot_rfs_validation(q, f_nl, predicted, n_train, figure_dir):
 
         file_path = Path(figure_dir) / f"Q2c_RFS_validation_DOF{dof+1}.pdf"
         fig.savefig(file_path, bbox_inches="tight")
+        plt.close(fig)
     return 
        
 
@@ -821,6 +827,6 @@ def plot_term_contributions(t, f_nl, predicted,  figure_dir):
 
         file_path = Path(figure_dir) / f"Q2c_force_reconstruction_DOF{dof+1}.pdf"
         fig.savefig(file_path, bbox_inches="tight")
+        plt.close(fig)
         
     return 
-

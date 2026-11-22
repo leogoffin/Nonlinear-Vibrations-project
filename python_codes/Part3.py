@@ -1,15 +1,16 @@
 #==================================================
 
-#AERO0035-1 Nonlinear Vibrations of Aerospace Structures
+# AERO0035-1 Nonlinear Vibrations of Aerospace Structures
 # Part 3 : Simulate
-#2026-2027 Project
-#Authors: Leo Goffin, Emmanuelle Henrion, Anaelle Sohier
+# 2026-2027 Project
+# Authors: Leo Goffin, Emmanuelle Henrion, Anaelle Sohier
 
 #==================================================
 
 from python_codes.general_functions import *
 
-MAT_FILENAME = "G7_exp1_3.mat"
+########################## SETTINGS #######################
+#----------------------------------------------------------
 
 M = np.array([[1, 0], [0, 1]])
 C = np.array([[3, -1], [-1, 3]])
@@ -306,14 +307,14 @@ PLOTS
 # 3a
 def plot_NLFR(F0,figure_dir):
     for dof in range(2):
+        setfig()
         result = hbm_pseudo_arclength(F0 = F0,omega0=30.0, omegamax=300, n_harmonics=5, n_steps=5000, ds=0.02)
         plt.plot(result['frequency_hz'], result['amplitude'][:, dof])
         plt.xlabel('Frequency (Hz)')
         plt.ylabel('Displacement amplitude (m)')
         plt.xlim(min(result["frequency_hz"]),max(result["frequency_hz"]))
         plt.ylim(0)
-        plt.tight_layout()
-        savefig(f"NLFR_{dof+1}",figure_dir)
+        savefig(f"NLFR_{dof+1}.pdf",figure_dir)
 
 
 #3b-3c
@@ -324,7 +325,7 @@ def plot_NNM(F0,figure_dir):
         NNMs[mode] = nnm_pseudo_arclength(mode)
 
     for dof in range(2):
-        
+        setfig()
         plt.plot(result['frequency_hz'], result['amplitude'][:, dof])
         for mode in range(2):
 
@@ -334,9 +335,9 @@ def plot_NNM(F0,figure_dir):
         plt.ylabel('Displacement amplitude (m)')
         plt.xlim(min(result["frequency_hz"]),max(result["frequency_hz"]))
         plt.ylim(0,0.3*F0/100)
-        plt.tight_layout()
         savefig(f"NNM_{dof+1}.pdf",figure_dir)
 
+    setfig()
     for mode in range(2):
         NNM = NNMs[mode]
         ratio = NNM['amplitude'][:, 0] / NNM['amplitude'][:, 1]
@@ -348,7 +349,6 @@ def plot_NNM(F0,figure_dir):
     plt.xlabel(r'q1_0 (m)')
     plt.ylabel(r'$A_1/A_2$')
     plt.legend()
-    plt.tight_layout()
     savefig("mode_shapes.pdf",figure_dir)
 
 # 3d
@@ -358,7 +358,7 @@ def plot_comparison_sinesweep(F0,mat_file,figure_dir,direction = "forward"):
     f = np.linspace(6,40,len(t)) if direction == "forward" else np.linspace(40,6,len(t))
     q = np.asarray(q, dtype=float)
 
-    plt.figure()
+    setfig()
     plt.plot(result["frequency_hz"], result["amplitude"][:, 0], label="NLFR", linewidth=2)
     plt.plot(f,q[:,0],label = "Sine sweep", alpha = 0.5)
     plt.xlabel("Frequency (Hz)")

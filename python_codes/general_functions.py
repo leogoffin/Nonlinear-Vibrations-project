@@ -1,7 +1,5 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import numpy as np
-import matplotlib.pyplot as plt
 from scipy.optimize import least_squares
 from scipy.linalg import eigh
 from itertools import combinations_with_replacement
@@ -31,8 +29,18 @@ def print_signal(t, q, q_dot, q_ddot, f_ext):
     print("Acceleration:", q_ddot.shape)
     print("External force:", f_ext.shape)
 
-def startfig(linewidth = 0.7,AR = 1.618):    
-    plt.figure(figsize = (8*linewidth,8/AR*linewidth))
+def set_plot_params(font_size):
+    plt.rcParams.update({
+            "text.usetex": False,
+            "font.family": "serif",
+            "font.serif": ["cmr10"],
+            "mathtext.fontset": "cm",
+            "axes.formatter.use_mathtext": True,
+            "axes.unicode_minus": False,
+            "font.size": font_size})
+
+def setfig(linewidth = 0.7,AR = 1.618):    
+    plt.figure(figsize = (8*linewidth/0.7,8/AR*linewidth/0.7))
 
 def savefig(name,figure_dir,format = 'pdf'):
     plt.tight_layout()  

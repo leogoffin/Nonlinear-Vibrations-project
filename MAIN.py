@@ -1,28 +1,25 @@
-#AERO0035-1 Nonlinear Vibrations of Aerospace Structures
-#2026-2027 Project
-#Authors: Léo Goffin, Emmanuelle Henrion, Anaëlle Sohier
+#==================================================
+
+# AERO0035-1 Nonlinear Vibrations of Aerospace Structures
+# Main code
+# 2026-2027 Project
+# Authors: Leo Goffin, Emmanuelle Henrion, Anaelle Sohier
+
+#==================================================
 
 from python_codes.general_functions import *
 import python_codes.Part2 as Q2
 import python_codes.Part3 as Q3
-import shutil
-print(shutil.which("latex"))
 
 project_dir = Path(__file__).resolve().parent
 figure_dir =project_dir.parent / "Figs"
 figure_dir_Q2 = figure_dir / "Q2"
 figure_dir_Q3 = figure_dir / "Q3"
 file_path = project_dir.parent / "Signals" / "G7_exp2_2.mat"
-    
+
+
 def main():
-    plt.rcParams.update({
-            "text.usetex": False,
-            "font.family": "serif",
-            "font.serif": ["cmr10"],
-            "mathtext.fontset": "cm",
-            "axes.formatter.use_mathtext": True,
-            "axes.unicode_minus": False,
-            "font.size": 20})
+    set_plot_params(20)
 
     t, q, q_dot, q_ddot, f_ext= loadmat(file_path)
     print_signal(t, q, q_dot, q_ddot, f_ext)

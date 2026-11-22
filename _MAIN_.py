@@ -7,9 +7,9 @@
 
 #==================================================
 
-from python_codes.general_functions import *
-import python_codes.Part2 as Q2
-import python_codes.Part3 as Q3
+from general_functions import *
+import Part2 as Q2
+import Part3 as Q3
 
 project_dir = Path(__file__).resolve().parent
 figure_dir =project_dir.parent / "Figs"

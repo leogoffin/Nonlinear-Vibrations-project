@@ -15,7 +15,7 @@ Question 2:
 Equations of motion : M*q_ddot + C*q_dot + K*q + F_nl = F_ext
 """
 
-from python_codes.general_functions import *
+from general_functions import *
 
 ########################## SETTINGS #######################
 #----------------------------------------------------------

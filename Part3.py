@@ -7,22 +7,7 @@
 
 #==================================================
 
-from general_functions import *
-
-########################## SETTINGS #######################
-#----------------------------------------------------------
-
-M = np.array([[1, 0], [0, 1]])
-C = np.array([[3, -1], [-1, 3]])
-K = np.array([[2e4, -1e4], [-1e4, 2e4]])
-k4 = 6.7e5
-k3 = 3.3e6
-
-def f_nl(q, q_dot):
-    F = np.zeros_like(q)
-    F[:, 0] = k4 * q[:, 0]**4
-    F[:, 1] = k3 * q[:, 1]**3
-    return F
+from general_functions_and_parameters import *
 
 #--------------------------------
 # NLFR computation (3a)
@@ -64,7 +49,38 @@ def hbm_pseudo_arclength(F0,
             D[2*k, 2*k-1] = k * omega
         return D
 
+    """
+    Floquet stability : 
+    
+    """
+    def floquet_stability(z, omega):
+        Z = z.reshape(nc, ndof)
+        q = Phi @ Z
+        qdot = Phi @ D_matrix(omega) @ Z
 
+        T = 2 * np.pi / omega
+        dt = T / n_samples
+        h = 1e-7
+        I = np.eye(ndof)
+
+        monodromy = np.eye(2 * ndof)
+
+        # Nonlinear force Jacobians at all time samples
+        Knl = np.stack([(f_nl(q + h*e, qdot) - f_nl(q - h*e, qdot))/(2*h) for e in I], axis=-1)
+        Cnl = np.stack([(f_nl(q, qdot + h*e) - f_nl(q, qdot - h*e))/(2*h) for e in I], axis=-1)
+
+        for i in range(n_samples):
+            j = (i + 1) % n_samples
+            A = np.block([[np.zeros((ndof, ndof)), I],
+                          [-np.linalg.solve(M, K + (Knl[i] + Knl[j])/2),
+                           -np.linalg.solve(M, C + (Cnl[i] + Cnl[j])/2)]])
+            monodromy = expm(A * dt) @ monodromy
+
+        multipliers = np.linalg.eigvals(monodromy)
+        exponents = np.log(multipliers.astype(complex)) / T
+
+        return np.max(exponents.real) < 0
+    
     """
     HBM residual : 
 
@@ -85,8 +101,9 @@ def hbm_pseudo_arclength(F0,
     z1 = least_squares(lambda z: residual(z, omega0), np.zeros(nc * ndof)).x # initial guess full of 0
     z2 = least_squares(lambda z: residual(z, omega0 + ds_min), z1).x         # next guess is the previous solution
     previous = np.r_[z1, omega0]
-    current  = np.r_[z2, omega0 + ds]
+    current  = np.r_[z2, omega0 + ds_min]
     branch   = [previous.copy(), current.copy()]
+    stable = [floquet_stability(z1, omega0),floquet_stability(z2, omega0 + ds_min)]
 
     for _ in range(n_steps):
 
@@ -124,6 +141,7 @@ def hbm_pseudo_arclength(F0,
 
         previous, current = current, sol.x
         branch.append(current.copy())
+        stable.append(floquet_stability(current[:-1], current[-1]))
 
         """
         Adapatative step size :
@@ -149,7 +167,8 @@ def hbm_pseudo_arclength(F0,
 
     return {'omega': omega,
             'frequency_hz': omega / (2 * np.pi),
-            'amplitude': amplitude}
+            'amplitude': amplitude,
+            'stable': np.asarray(stable, dtype=bool)}
 
 #--------------------------------
 # NNM computation (3b-3c)
@@ -285,9 +304,6 @@ def nnm_pseudo_arclength(mode, A0=0.0005, Amax=0.25,
         if amplitude[0] >= Amax:
             break
 
-    """
-    Extract frequencies, amplitudes and Fourier coefficients
-    """
     branch = np.asarray(branch)
     omega = branch[:, -1]
     coeffs = branch[:, :-1].reshape(-1, nc, ndof)
@@ -303,17 +319,41 @@ def nnm_pseudo_arclength(mode, A0=0.0005, Amax=0.25,
 """
 PLOTS
 """
+
 # 3a
-def plot_NLFR(F0,figure_dir):
+def plot_NLFR(F0, figure_dir):
+
+    result = hbm_pseudo_arclength(F0=F0, omega0=30.0, omegamax=300, n_harmonics=5, n_steps=5000, ds=0.02)
+
+    f = result["frequency_hz"]
+    stable = result["stable"]
+
+    # Stability changes
+    folds = np.where(stable[1:] != stable[:-1])[0]
+    f_fold = (f[folds] + f[folds+1])/2
+    f_plot = np.insert(f, folds+1, f_fold)
+    stable_plot = np.insert(stable, folds+1, True)
+    unstable_plot = np.insert(~stable, folds+1, True)
+
     for dof in range(2):
         setfig()
-        result = hbm_pseudo_arclength(F0 = F0,omega0=30.0, omegamax=300, n_harmonics=5, n_steps=5000, ds=0.02)
-        plt.plot(result['frequency_hz'], result['amplitude'][:, dof])
-        plt.xlabel('Frequency (Hz)')
-        plt.ylabel('Displacement amplitude (m)')
-        plt.xlim(min(result["frequency_hz"]),max(result["frequency_hz"]))
+
+        A = result["amplitude"][:, dof]
+        A_fold = (A[folds] + A[folds+1])/2
+        A_plot = np.insert(A, folds+1, A_fold)
+
+        plt.plot(f_plot, np.where(stable_plot, A_plot, np.nan), color="C0", linestyle="-", label="Stable")
+        plt.plot(f_plot, np.where(unstable_plot, A_plot, np.nan), color="C0", linestyle="--", label="Unstable")
+        plt.scatter(f_fold, A_fold, facecolors="white", edgecolors="black", s=40, zorder=5, label="Fold")
+
+        plt.xlabel("Frequency (Hz)")
+        plt.ylabel("Displacement amplitude (m)")
+        plt.xlim(min(f), max(f))
         plt.ylim(0)
-        savefig(f"NLFR_{dof+1}.pdf",figure_dir)
+        plt.legend()
+
+        savefig(f"NLFR_{dof+1}.pdf", figure_dir)
+
 
 
 #3b-3c

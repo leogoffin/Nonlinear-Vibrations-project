@@ -1,11 +1,24 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import least_squares
-from scipy.linalg import eigh
+from scipy.linalg import eigh,expm
 from itertools import combinations_with_replacement
 from pathlib import Path
 import h5py
 import os
+
+
+M = np.array([[1, 0], [0, 1]])
+C = np.array([[3, -1], [-1, 3]])
+K = np.array([[2e4, -1e4], [-1e4, 2e4]])
+k4 = 6.7e5
+k3 = 3.3e6
+
+def f_nl(q, q_dot):
+    F = np.zeros_like(q)
+    F[:, 0] = k4 * q[:, 0]**4
+    F[:, 1] = k3 * q[:, 1]**3
+    return F
 
 def loadmat(filename):
 
@@ -28,6 +41,8 @@ def print_signal(t, q, q_dot, q_ddot, f_ext):
     print("Velocity:", q_dot.shape)
     print("Acceleration:", q_ddot.shape)
     print("External force:", f_ext.shape)
+
+dof_colors = ["blue","red"]
 
 def set_plot_params(font_size):
     plt.rcParams.update({
@@ -73,4 +88,12 @@ def plot_signal(t, q, q_dot, q_ddot, f_ext, figure_dir):
     return 
 
 
+def rms(values):
 
+    values = np.asarray(values)     
+    squared_values = values**2     
+    mean_squared = np.mean(squared_values)
+    rms = np.sqrt(mean_squared)      
+    rms = float(rms)     
+
+    return rms

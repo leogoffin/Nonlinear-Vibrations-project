@@ -15,43 +15,10 @@ Question 2:
 Equations of motion : M*q_ddot + C*q_dot + K*q + F_nl = F_ext
 """
 
-from general_functions import *
+from general_functions_and_parameters import *
 
-########################## SETTINGS #######################
-#----------------------------------------------------------
-
-#Dynamics of the local component:
-M = np.array([[1, 0],
-              [0, 1]])
-
-C = np.array([[3, -1],
-              [-1, 3]])
-
-K = np.array([[2e4, -1e4],
-              [-1e4, 2e4]])
-
-
-dof_colors = ["blue", "red"]
-
-#(location, variable, degree): 
-#    location = mass1/mass2/between
-#    variable = q (displacement), v (velocity)
-#    degree = 1,2,...
 
 max_plot_points = 20000
-
-########################## USEFUL FUNCTIONS #######################
-#-----------------------------------------------------------------
-
-def rms(values):
-
-    values = np.asarray(values)     
-    squared_values = values**2     
-    mean_squared = np.mean(squared_values)
-    rms = np.sqrt(mean_squared)      
-    rms = float(rms)     
-
-    return rms
 
 
 def plot_indices(n_samples):

@@ -7,17 +7,17 @@
 
 #==================================================
 
-from general_functions import *
+from general_functions_and_parameters import *
 import Part2 as Q2
 import Part3 as Q3
 
 project_dir = Path(__file__).resolve().parent
-figure_dir =project_dir.parent / "Figs"
+figure_dir = project_dir.parent / "Figs"
 figure_dir_Q2 = figure_dir / "Q2"
 figure_dir_Q3 = figure_dir / "Q3"
 signals_path = project_dir.parent / "Signals" 
 
-do_Q2 = False
+do_Q2 = True
 do_Q3 = True
 
 def main():
